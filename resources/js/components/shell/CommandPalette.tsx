@@ -105,7 +105,7 @@ export function CommandPalette() {
             <div
                 role="dialog"
                 aria-label="Command palette"
-                className="animate-in relative w-full max-w-lg overflow-hidden rounded-[var(--radius-card)] border border-default bg-surface shadow-[var(--shadow-md)]"
+                className="animate-pop relative w-full max-w-lg overflow-hidden rounded-[var(--radius-card)] border border-default bg-surface shadow-[var(--shadow-md)]"
             >
                 <div className="flex items-center gap-2.5 border-b border-default px-4">
                     <Search className="size-4 text-tertiary" />

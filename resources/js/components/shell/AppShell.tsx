@@ -287,7 +287,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                 </header>
 
                 {/* Content — bottom padding clears the mobile tab bar */}
-                <main className="min-h-0 flex-1 overflow-hidden pb-[calc(56px+env(safe-area-inset-bottom))] lg:pb-0">
+                <main key={url.split('?')[0]} className="animate-in min-h-0 flex-1 overflow-hidden pb-[calc(56px+env(safe-area-inset-bottom))] lg:pb-0">
                     {children}
                 </main>
             </div>

@@ -49,11 +49,11 @@ export default function Dashboard({ kpis, revenueTrend, leaderboard, recovered, 
                     </div>
 
                     {/* KPI grid */}
-                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                        {kpis.map((k) => {
+                    <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
+                        {kpis.map((k, i) => {
                             const positive = k.delta >= 0;
                             return (
-                                <Card key={k.label} className="p-4">
+                                <Card key={k.label} className="p-4" style={{ '--i': i } as React.CSSProperties}>
                                     <p className="text-[13px] text-secondary">{k.label}</p>
                                     <div className="mt-1 flex items-end justify-between">
                                         <span className="text-2xl font-semibold tracking-tight tnum">{k.value}</span>
