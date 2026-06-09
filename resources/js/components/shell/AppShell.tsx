@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
+import { createPortal } from 'react-dom';
 import {
     Inbox,
     Users,
@@ -20,16 +21,21 @@ import {
     Lock,
     LogOut,
     ChevronDown,
+    Menu,
+    X,
+    Download,
 } from 'lucide-react';
 import { cn, money } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { useTranslations } from '@/hooks/useTranslations';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Avatar } from '@/components/ui/Avatar';
+import { Switch } from '@/components/ui/Switch';
 import { useToast } from '@/components/ui/Toast';
 import { CommandPalette } from './CommandPalette';
 import { OfflineBanner } from './OfflineBanner';
 import { Brand } from '@/components/Brand';
+import { onInstallAvailability, promptInstall } from '@/lib/pwa';
 import type { PageProps } from '@/types';
 
 interface NavItem {
@@ -37,9 +43,7 @@ interface NavItem {
     href: string;
     icon: React.ComponentType<{ className?: string }>;
     badge?: number;
-    /** Plan feature this item requires; absent = always available. */
     feature?: string;
-    /** Capability required to see this item (e.g. manager reports). */
     managerOnly?: boolean;
 }
 
@@ -66,12 +70,15 @@ const languages = [
     { code: 'pt', label: 'Português' },
 ];
 
+const openPalette = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
+
 export function AppShell({ title, children }: { title?: string; children: ReactNode }) {
     const { props, url } = usePage<PageProps>();
     const { theme, toggle } = useTheme();
     const { t, locale } = useTranslations();
     const { toast } = useToast();
     const [menuOpen, setMenuOpen] = useState(false);
+    const [moreOpen, setMoreOpen] = useState(false);
     const workspace = props.auth.workspace;
     const user = props.auth.user;
     const features = props.auth.features ?? [];
@@ -85,7 +92,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
         const Icon = item.icon;
         const locked = !!item.feature && !features.includes(item.feature);
         const className = cn(
-            'group relative flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-start text-[13px] font-medium transition-colors',
+            'press group relative flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-start text-[13px] font-medium transition-colors',
             active ? 'bg-accent-subtle text-accent' : 'text-secondary hover:bg-surface-hover hover:text-primary',
         );
         const inner = (
@@ -105,7 +112,6 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
             </>
         );
 
-        // Locked → upgrade explainer, never a dead end (B2 / C-17).
         return locked ? (
             <button
                 key={item.href}
@@ -130,8 +136,8 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
         <div className="flex h-screen overflow-hidden bg-canvas text-primary">
             <CommandPalette />
 
-            {/* Nav rail (B2) */}
-            <aside className="flex w-[228px] shrink-0 flex-col border-e border-default bg-surface">
+            {/* Desktop nav rail (B2) */}
+            <aside className="hidden w-[228px] shrink-0 flex-col border-e border-default bg-surface lg:flex">
                 <div className="flex h-14 items-center px-5">
                     <Brand />
                 </div>
@@ -153,7 +159,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                     <Link
                         href="/settings"
                         className={cn(
-                            'flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-[13px] font-medium transition-colors',
+                            'press flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-[13px] font-medium transition-colors',
                             isActive('/settings')
                                 ? 'bg-accent-subtle text-accent'
                                 : 'text-secondary hover:bg-surface-hover hover:text-primary',
@@ -168,29 +174,39 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
             {/* Main column */}
             <div className="flex min-w-0 flex-1 flex-col">
                 <OfflineBanner />
-                {/* Top bar (B2) */}
-                <header className="flex h-14 shrink-0 items-center gap-3 border-b border-default bg-surface px-5">
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-sm font-semibold">{title}</h1>
-                    </div>
 
+                {/* Top bar — responsive (B2) */}
+                <header className="flex h-14 shrink-0 items-center gap-2 border-b border-default bg-surface px-3 sm:gap-3 sm:px-5">
+                    {/* Mobile brand mark */}
+                    <div className="flex size-8 items-center justify-center rounded-lg bg-accent text-sm font-bold text-accent-contrast lg:hidden">
+                        A
+                    </div>
+                    <h1 className="truncate text-sm font-semibold">{title}</h1>
+
+                    {/* Desktop search */}
                     <button
-                        onClick={() => {
-                            const ev = new KeyboardEvent('keydown', { key: 'k', metaKey: true });
-                            document.dispatchEvent(ev);
-                        }}
-                        className="ms-auto flex h-8 w-64 items-center gap-2 rounded-[var(--radius-control)] border border-default bg-canvas px-3 text-[13px] text-tertiary transition-colors hover:border-strong"
+                        onClick={openPalette}
+                        className="press ms-auto hidden h-8 w-64 items-center gap-2 rounded-[var(--radius-control)] border border-default bg-canvas px-3 text-[13px] text-tertiary transition-colors hover:border-strong lg:flex"
                     >
                         <Search className="size-4" />
                         <span className="flex-1 text-start">{t('common.search')}</span>
                         <kbd className="rounded border border-default px-1 text-[11px]">⌘K</kbd>
                     </button>
 
-                    {/* Wallet chip — warning tint when low (B2) */}
+                    {/* Mobile search icon */}
+                    <button
+                        onClick={openPalette}
+                        aria-label={t('common.search')}
+                        className="press ms-auto flex size-9 items-center justify-center rounded-[var(--radius-control)] text-secondary hover:bg-surface-hover lg:hidden"
+                    >
+                        <Search className="size-[18px]" />
+                    </button>
+
+                    {/* Wallet chip — hidden on the smallest screens */}
                     <Link
                         href="/settings/wallet"
                         className={cn(
-                            'flex h-8 items-center gap-1.5 rounded-[var(--radius-control)] border px-2.5 text-[13px] font-medium tnum transition-colors',
+                            'hidden h-8 items-center gap-1.5 rounded-[var(--radius-control)] border px-2.5 text-[13px] font-medium tnum transition-colors sm:flex',
                             lowWallet
                                 ? 'border-warning/30 bg-warning-subtle text-warning'
                                 : 'border-default text-secondary hover:bg-surface-hover',
@@ -201,9 +217,9 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                     </Link>
 
                     <Tooltip label="Notifications">
-                        <button className="relative flex size-8 items-center justify-center rounded-[var(--radius-control)] text-secondary hover:bg-surface-hover hover:text-primary">
+                        <button className="press relative flex size-9 items-center justify-center rounded-[var(--radius-control)] text-secondary hover:bg-surface-hover hover:text-primary sm:size-8">
                             <Bell className="size-[18px]" />
-                            <span className="absolute end-1.5 top-1.5 size-1.5 rounded-full bg-danger" />
+                            <span className="absolute end-2 top-2 size-1.5 rounded-full bg-danger sm:end-1.5 sm:top-1.5" />
                         </button>
                     </Tooltip>
 
@@ -211,16 +227,16 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                         <button
                             onClick={toggle}
                             aria-label="Toggle theme"
-                            className="flex size-8 items-center justify-center rounded-[var(--radius-control)] text-secondary hover:bg-surface-hover hover:text-primary"
+                            className="press hidden size-8 items-center justify-center rounded-[var(--radius-control)] text-secondary hover:bg-surface-hover hover:text-primary sm:flex"
                         >
                             {theme === 'dark' ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
                         </button>
                     </Tooltip>
 
-                    <div className="relative">
+                    <div className="relative hidden sm:block">
                         <button
                             onClick={() => setMenuOpen((o) => !o)}
-                            className="flex items-center gap-1.5 rounded-[var(--radius-control)] p-0.5 hover:bg-surface-hover"
+                            className="press flex items-center gap-1.5 rounded-[var(--radius-control)] p-0.5 hover:bg-surface-hover"
                         >
                             <Avatar name={user?.name ?? 'You'} size="sm" />
                             <ChevronDown className="size-3.5 text-tertiary" />
@@ -228,14 +244,14 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                         {menuOpen && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-                                <div className="animate-in absolute end-0 top-full z-50 mt-1.5 w-52 rounded-[var(--radius-card)] border border-default bg-surface p-1.5 shadow-[var(--shadow-sm)]">
+                                <div className="animate-pop absolute end-0 top-full z-50 mt-1.5 w-52 rounded-[var(--radius-card)] border border-default bg-surface p-1.5 shadow-[var(--shadow-sm)]">
                                     <div className="px-3 py-2">
                                         <p className="text-[13px] font-semibold text-primary">{user?.name}</p>
                                         <p className="text-[12px] text-tertiary">{user?.email}</p>
                                     </div>
                                     <div className="my-1 h-px bg-default" />
                                     <Link href="/settings/profile" className="block rounded-md px-3 py-1.5 text-[13px] text-secondary hover:bg-surface-hover hover:text-primary">
-                                        Profile & preferences
+                                        Profile &amp; preferences
                                     </Link>
                                     <div className="my-1 h-px bg-default" />
                                     <p className="px-3 pb-1 pt-1 text-[11px] font-medium uppercase tracking-wide text-tertiary">
@@ -246,14 +262,10 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                                             <button
                                                 key={l.code}
                                                 onClick={() =>
-                                                    router.post(
-                                                        '/locale',
-                                                        { locale: l.code },
-                                                        { onSuccess: () => window.location.reload() },
-                                                    )
+                                                    router.post('/locale', { locale: l.code }, { onSuccess: () => window.location.reload() })
                                                 }
                                                 className={cn(
-                                                    'rounded-md px-2 py-1 text-[12px] font-medium',
+                                                    'press rounded-md px-2 py-1 text-[12px] font-medium',
                                                     locale === l.code ? 'bg-accent-subtle text-accent' : 'text-secondary hover:bg-surface-hover',
                                                 )}
                                             >
@@ -274,8 +286,161 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                     </div>
                 </header>
 
-                <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
+                {/* Content — bottom padding clears the mobile tab bar */}
+                <main className="min-h-0 flex-1 overflow-hidden pb-[calc(56px+env(safe-area-inset-bottom))] lg:pb-0">
+                    {children}
+                </main>
             </div>
+
+            {/* Mobile bottom tab bar (B13) */}
+            <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-default bg-surface lg:hidden">
+                <div className="flex h-14 items-stretch">
+                    <TabLink href="/inbox" icon={Inbox} label={t('nav.inbox')} active={isActive('/inbox')} badge={7} />
+                    <TabLink href="/contacts" icon={Users} label={t('nav.contacts')} active={isActive('/contacts')} />
+                    <TabLink href="/dashboard" icon={BarChart3} label={t('nav.analytics')} active={isActive('/dashboard') || url.startsWith('/reports')} />
+                    <button
+                        onClick={() => setMoreOpen(true)}
+                        className="press flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-secondary"
+                    >
+                        <Menu className="size-[22px]" />
+                        {t('nav.more', 'More')}
+                    </button>
+                </div>
+            </nav>
+
+            {moreOpen && (
+                <MoreSheet
+                    onClose={() => setMoreOpen(false)}
+                    renderItem={renderItem}
+                    can={can}
+                    theme={theme}
+                    toggleTheme={toggle}
+                    user={user}
+                />
+            )}
         </div>
+    );
+}
+
+function TabLink({
+    href,
+    icon: Icon,
+    label,
+    active,
+    badge,
+}: {
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+    label: string;
+    active: boolean;
+    badge?: number;
+}) {
+    return (
+        <Link
+            href={href}
+            className={cn(
+                'press relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors',
+                active ? 'text-accent' : 'text-secondary',
+            )}
+        >
+            {active && <span className="absolute top-0 h-0.5 w-8 rounded-b-full bg-accent" />}
+            <span className="relative">
+                <Icon className="size-[22px]" />
+                {badge ? (
+                    <span className="absolute -end-2 -top-1 flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[9px] font-semibold text-accent-contrast">
+                        {badge}
+                    </span>
+                ) : null}
+            </span>
+            {label}
+        </Link>
+    );
+}
+
+function MoreSheet({
+    onClose,
+    renderItem,
+    can,
+    theme,
+    toggleTheme,
+    user,
+}: {
+    onClose: () => void;
+    renderItem: (item: NavItem) => ReactNode;
+    can: PageProps['auth']['can'];
+    theme: string;
+    toggleTheme: () => void;
+    user: PageProps['auth']['user'];
+}) {
+    const [canInstallApp, setCanInstallApp] = useState(false);
+    useEffect(() => onInstallAvailability(setCanInstallApp), []);
+
+    const secondary = nav.filter((n) => !['/inbox', '/contacts', '/dashboard'].includes(n.href));
+
+    return createPortal(
+        <div className="fixed inset-0 z-[80] lg:hidden">
+            <div className="absolute inset-0 bg-gray-900/40 animate-in" onClick={onClose} />
+            <div className="pb-safe animate-slide-up absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-[18px] border-t border-default bg-surface">
+                <div className="sticky top-0 flex items-center justify-between border-b border-default bg-surface px-5 py-3.5">
+                    <Brand />
+                    <button onClick={onClose} aria-label="Close" className="press text-tertiary hover:text-primary">
+                        <X className="size-5" />
+                    </button>
+                </div>
+
+                <div className="stagger space-y-0.5 p-3" onClick={onClose}>
+                    {secondary.map((item, i) => (
+                        <div key={item.href} style={{ '--i': i } as React.CSSProperties}>
+                            {renderItem(item)}
+                        </div>
+                    ))}
+                    {can.manage_team &&
+                        reportsNav.map((item, i) => (
+                            <div key={item.href} style={{ '--i': secondary.length + i } as React.CSSProperties}>
+                                {renderItem(item)}
+                            </div>
+                        ))}
+                    <div style={{ '--i': 10 } as React.CSSProperties}>{renderItem({ key: 'nav.settings', href: '/settings', icon: Settings })}</div>
+                </div>
+
+                <div className="border-t border-default p-3">
+                    <button
+                        onClick={toggleTheme}
+                        className="press flex w-full items-center justify-between rounded-[var(--radius-control)] px-3 py-2.5 text-[13px] font-medium text-secondary hover:bg-surface-hover"
+                    >
+                        <span className="flex items-center gap-3">
+                            {theme === 'dark' ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
+                            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                        </span>
+                        <Switch checked={theme === 'dark'} onChange={toggleTheme} label="Toggle theme" />
+                    </button>
+
+                    {canInstallApp && (
+                        <button
+                            onClick={() => promptInstall()}
+                            className="press mt-1 flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2.5 text-[13px] font-medium text-accent hover:bg-surface-hover"
+                        >
+                            <Download className="size-[18px]" /> Install app
+                        </button>
+                    )}
+
+                    <div className="mt-3 flex items-center gap-3 border-t border-default px-3 pt-3">
+                        <Avatar name={user?.name ?? 'You'} size="sm" />
+                        <div className="min-w-0 flex-1">
+                            <p className="truncate text-[13px] font-medium">{user?.name}</p>
+                            <p className="truncate text-[12px] text-tertiary">{user?.email}</p>
+                        </div>
+                        <button
+                            onClick={() => router.post('/logout')}
+                            aria-label="Log out"
+                            className="press flex size-9 items-center justify-center rounded-[var(--radius-control)] text-secondary hover:bg-surface-hover hover:text-danger"
+                        >
+                            <LogOut className="size-[18px]" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>,
+        document.body,
     );
 }

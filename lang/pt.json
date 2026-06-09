@@ -13,5 +13,6 @@
     "nav.reports": "Relatórios",
     "nav.agents": "Desempenho",
     "nav.sales": "Vendas",
-    "nav.csat": "CSAT"
+    "nav.csat": "CSAT",
+    "nav.more": "Mais"
 }
