@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { Search, Upload, Plus, Tag as TagIcon, Send } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
 import { AppShell } from '@/components/shell/AppShell';
 import { Page } from '@/components/shell/Page';
 import { Table, type Column } from '@/components/ui/Table';
@@ -22,8 +23,21 @@ interface Row {
 }
 
 export default function ContactsIndex({ contacts }: { contacts: Row[] }) {
+    const { toast } = useToast();
     const [query, setQuery] = useState('');
     const [selected, setSelected] = useState<Set<number>>(new Set());
+    const fileRef = useRef<HTMLInputElement>(null);
+
+    const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        router.post('/contacts/import', { file }, {
+            forceFormData: true,
+            onSuccess: () => toast('Import processed', { tone: 'success' }),
+            onError: () => toast('Import failed — check the file format', { tone: 'error' }),
+        });
+        e.target.value = '';
+    };
 
     const filtered = useMemo(
         () => contacts.filter((c) => c.name.toLowerCase().includes(query.toLowerCase())),
@@ -91,7 +105,10 @@ export default function ContactsIndex({ contacts }: { contacts: Row[] }) {
                 description={`${contacts.length} customers`}
                 actions={
                     <>
-                        <Button variant="secondary"><Upload className="size-4" /> Import</Button>
+                        <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onImport} />
+                        <Button variant="secondary" onClick={() => fileRef.current?.click()}>
+                            <Upload className="size-4" /> Import
+                        </Button>
                         <Button><Plus className="size-4" /> Add contact</Button>
                     </>
                 }

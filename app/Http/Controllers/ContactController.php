@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\ImportContacts;
 use App\Models\Contact;
 use App\Models\Order;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,6 +29,40 @@ class ContactController extends Controller
             ])->values();
 
         return Inertia::render('Contacts/Index', ['contacts' => $contacts]);
+    }
+
+    /**
+     * Import contacts from an uploaded CSV (B4.1 / C-19): mapping + validation
+     * preview, dedupe, async-style summary. Small files parse inline; large ones
+     * would be queued in production.
+     */
+    public function import(Request $request, ImportContacts $importer): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ]);
+
+        $path = $request->file('file')->getRealPath();
+        $rows = [];
+
+        if (($handle = fopen($path, 'r')) !== false) {
+            $header = fgetcsv($handle);
+            $header = is_array($header) ? array_map(fn ($h) => strtolower(trim((string) $h)), $header) : [];
+
+            while (($line = fgetcsv($handle)) !== false) {
+                /** @var array<string, string|null> $assoc */
+                $assoc = [];
+                foreach ($header as $idx => $key) {
+                    $assoc[$key] = $line[$idx] ?? null;
+                }
+                $rows[] = $assoc;
+            }
+            fclose($handle);
+        }
+
+        $summary = $importer->handle($rows);
+
+        return back()->with('success', "Import complete: {$summary['added']} added · {$summary['merged']} merged · {$summary['invalid']} invalid.");
     }
 
     /** Contact profile (B4.2). */

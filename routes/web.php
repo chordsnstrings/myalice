@@ -48,6 +48,7 @@ Route::middleware(['auth', 'workspace'])->group(function () {
 
     // CRM
     Route::get('/contacts', [ContactController::class, 'index'])->name('contacts');
+    Route::post('/contacts/import', [ContactController::class, 'import'])->name('contacts.import');
     Route::get('/contacts/{contact}', [ContactController::class, 'show'])->name('contacts.show');
 
     // Chatbots
