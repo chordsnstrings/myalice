@@ -18,7 +18,7 @@
     { "id": "P2", "name": "App shell & design system", "status": "done", "note": "Design tokens, component library, universal patterns, shell + cmdK, offline banner." },
     { "id": "P3", "name": "Channel gateway & WhatsApp", "status": "done-stubbed", "note": "Connector interface + WhatsApp connector (stub mode), idempotent webhook, queued jobs. Live sends need WABA creds (BLK-4)." },
     { "id": "P4", "name": "Unified inbox & composer", "status": "done", "note": "3-pane inbox, composer state machine, realtime subscription (degrades w/o broker), offline queue." },
-    { "id": "P5", "name": "Contacts, CRM, hours & routing", "status": "done", "note": "Contact CRM + profile, tags/quick replies, business hours, CSV import (validate/dedupe/summary). Auto-routing engine deferred." },
+    { "id": "P5", "name": "Contacts, CRM, hours & routing", "status": "done", "note": "Contact CRM + profile, tags/quick replies, business hours, CSV import, load-balanced auto-routing (inbound new conversations). Skills-based routing deferred." },
     { "id": "P6", "name": "eCommerce & conversational commerce", "status": "ui-done", "note": "Orders + catalog UI, store connection model. Live store sync + chat-to-order writeback need a dev store (BLK-5)." },
     { "id": "P7", "name": "Chatbot / flow builder", "status": "mostly-done", "note": "Bot list + visual builder + FlowValidator (dead-ends/fallbacks/loops, C-10) + atomic publish gate. Runtime execution engine deferred (PUNCHLIST)." },
     { "id": "P8", "name": "Broadcasts, templates & wallet pre-flight", "status": "done", "note": "Composer pre-flight + template manager + real send engine with atomic wallet debit and mid-send pause (C-03). Meta throughput throttle deferred." },

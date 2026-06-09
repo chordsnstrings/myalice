@@ -7,6 +7,7 @@ use App\Models\Contact;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Workspace;
+use App\Services\RoutingService;
 use App\Support\Tenancy;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -49,6 +50,11 @@ class ProcessInboundMessage implements ShouldQueue
             ['contact_id' => $contact->id, 'channel' => $this->channel],
             ['status' => 'open', 'window_open' => true],
         );
+
+        // Auto-route brand-new conversations to an available agent (M5).
+        if ($conversation->wasRecentlyCreated) {
+            app(RoutingService::class)->assign($conversation);
+        }
 
         $created = Message::create([
             'conversation_id' => $conversation->id,
