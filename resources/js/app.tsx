@@ -5,7 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { ToastProvider } from '@/components/ui/Toast';
 
 createInertiaApp({
-    title: (title) => (title ? `${title} · MyAlice` : 'MyAlice'),
+    title: (title) => (title ? `${title} · ARKS Messages Platform` : 'ARKS Messages Platform'),
     resolve: (name) => {
         const pages = import.meta.glob<{ default: ResolvedComponent }>('./Pages/**/*.tsx');
         return pages[`./Pages/${name}.tsx`]().then((m) => m.default);

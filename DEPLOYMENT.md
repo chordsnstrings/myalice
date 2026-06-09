@@ -1,4 +1,4 @@
-# MyAlice — SiteGround Deployment Runbook
+# ARKS Messages Platform — SiteGround Deployment Runbook
 
 The architecture is shaped by verified SiteGround constraints (Build Prompt §3):
 **no daemons, cron-driven queues, Memcached not Redis, hosted realtime, CI-built assets, external media.**

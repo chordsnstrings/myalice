@@ -26,7 +26,7 @@ export default function Login() {
     };
 
     return (
-        <AuthLayout title="Welcome back" subtitle="Log in to your MyAlice workspace.">
+        <AuthLayout title="Welcome back" subtitle="Log in to your ARKS Messages Platform workspace.">
             <Head title="Log in" />
             <form onSubmit={submit} className="space-y-4" noValidate>
                 <Input

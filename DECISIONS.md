@@ -24,7 +24,7 @@ Decisions are append-only. Each records the choice, the rationale, and any spec 
 
 ## ADR-006 — Design language
 - **Decision:** Neutral-led cool-gray ramp, a single calm **teal** accent (`#0d9488` light / `#14b8a6` dark), four semantic colours, Inter typeface. Border-led surfaces; shadows reserved for floating layers only; 6px controls / 10px cards.
-- **Rationale:** UX spec Part A demands minimal, modern, content-first surfaces with rationed colour. Accent maps to MyAlice's WhatsApp-adjacent green/teal brand without competing with content.
+- **Rationale:** UX spec Part A demands minimal, modern, content-first surfaces with rationed colour. Accent maps to ARKS Messages Platform's WhatsApp-adjacent green/teal brand without competing with content.
 
 ## ADR-007 — Inertia page directory
 - **Decision:** Pages live in `resources/js/Pages` (PascalCase); `config/inertia.php` points the test page-existence check at that path with `tsx` extension.

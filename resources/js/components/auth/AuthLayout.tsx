@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { MessageSquare, ShoppingBag, Zap } from 'lucide-react';
+import { Brand } from '@/components/Brand';
 
 /** Quiet split screen — form left, one-line proof right; collapses to form-only (B1.1). */
 export function AuthLayout({
@@ -14,12 +15,7 @@ export function AuthLayout({
     return (
         <div className="flex min-h-screen bg-canvas">
             <div className="flex w-full flex-col px-6 py-8 lg:w-[460px] lg:shrink-0 lg:px-14">
-                <div className="flex items-center gap-2.5">
-                    <div className="flex size-7 items-center justify-center rounded-lg bg-accent text-accent-contrast">
-                        <span className="text-sm font-bold">M</span>
-                    </div>
-                    <span className="text-[15px] font-semibold tracking-tight text-primary">MyAlice</span>
-                </div>
+                <Brand />
 
                 <div className="flex flex-1 flex-col justify-center">
                     <div className="mx-auto w-full max-w-[340px] py-10">

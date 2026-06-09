@@ -39,7 +39,7 @@ export default function Developer() {
             <Card className="divide-y divide-[var(--border)]">
                 <div className="flex items-center gap-3 px-4 py-3">
                     <div className="flex-1">
-                        <p className="text-sm font-medium">https://hooks.acme.com/myalice</p>
+                        <p className="text-sm font-medium">https://hooks.acme.com/arks</p>
                         <p className="text-[12px] text-tertiary">message.created, order.created</p>
                     </div>
                     <Badge tone="success">Active</Badge>

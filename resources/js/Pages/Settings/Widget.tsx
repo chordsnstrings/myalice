@@ -10,7 +10,7 @@ import { useToast } from '@/components/ui/Toast';
 export default function Widget({ workspace_id }: { workspace_id: number; whatsapp: string | null }) {
     const { toast } = useToast();
     const [greeting, setGreeting] = useState('Hi 👋 How can we help?');
-    const snippet = `<script src="https://cdn.myalice.ai/widget.js" data-workspace="${workspace_id}" async></script>`;
+    const snippet = `<script src="https://cdn.arksmessages.com/widget.js" data-workspace="${workspace_id}" async></script>`;
 
     return (
         <SettingsLayout title="Web chat widget">

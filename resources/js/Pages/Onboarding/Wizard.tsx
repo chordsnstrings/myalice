@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { Check, MessageCircle, Store, Users, Sparkles, ArrowRight } from 'lucide-react';
+import { Brand } from '@/components/Brand';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 
@@ -23,10 +24,7 @@ export default function Wizard() {
         <div className="flex min-h-screen flex-col bg-canvas">
             <Head title="Get started" />
             <header className="flex h-14 items-center justify-between border-b border-default bg-surface px-6">
-                <div className="flex items-center gap-2.5">
-                    <div className="flex size-7 items-center justify-center rounded-lg bg-accent text-accent-contrast text-sm font-bold">M</div>
-                    <span className="text-[15px] font-semibold tracking-tight">MyAlice</span>
-                </div>
+                <Brand />
                 <button onClick={() => router.visit('/inbox')} className="text-[13px] font-medium text-secondary hover:text-primary">
                     Do this later
                 </button>
@@ -69,7 +67,7 @@ export default function Wizard() {
                         Step {step + 1} of {steps.length}
                     </p>
                     <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-                        {step === 0 && 'Welcome to MyAlice 👋'}
+                        {step === 0 && 'Welcome to ARKS Messages Platform 👋'}
                         {step === 1 && 'Connect your first channel'}
                         {step === 2 && 'Connect your store'}
                         {step === 3 && 'Invite your team'}

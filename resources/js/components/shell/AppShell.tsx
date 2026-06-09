@@ -25,6 +25,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { Avatar } from '@/components/ui/Avatar';
 import { CommandPalette } from './CommandPalette';
 import { OfflineBanner } from './OfflineBanner';
+import { Brand } from '@/components/Brand';
 import type { PageProps } from '@/types';
 
 interface NavItem {
@@ -69,11 +70,8 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
 
             {/* Nav rail (B2) */}
             <aside className="flex w-[228px] shrink-0 flex-col border-e border-default bg-surface">
-                <div className="flex h-14 items-center gap-2.5 px-5">
-                    <div className="flex size-7 items-center justify-center rounded-lg bg-accent text-accent-contrast">
-                        <span className="text-sm font-bold">M</span>
-                    </div>
-                    <span className="text-[15px] font-semibold tracking-tight">MyAlice</span>
+                <div className="flex h-14 items-center px-5">
+                    <Brand />
                 </div>
 
                 <nav className="flex-1 space-y-0.5 px-3 py-2">

@@ -1,4 +1,4 @@
-# MyAlice
+# ARKS Messages Platform
 
 A multi-tenant conversational support, sales and marketing platform for eCommerce/DTC brands —
 one inbox that unifies WhatsApp, Instagram, Messenger, Telegram, Line, Viber and the web,
