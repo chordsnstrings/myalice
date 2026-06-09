@@ -165,12 +165,28 @@ VITE_PUSHER_APP_KEY="${PUSHER_APP_KEY}"
 VITE_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
 
 MAIL_MAILER=smtp              # configure your SMTP for password resets etc.
+
+# Optional — Meta "Connect with Facebook" one-click onboarding (else admins paste
+# tokens manually in Settings → Channels). See docs/CHANNELS.md.
+META_APP_ID=
+META_GRAPH_VERSION=v21.0
+META_WA_CONFIG_ID=
+META_MESSENGER_CONFIG_ID=
+META_INSTAGRAM_CONFIG_ID=
+VITE_META_APP_ID="${META_APP_ID}"
+VITE_META_GRAPH_VERSION="${META_GRAPH_VERSION}"
 ```
 
-> Channel credentials (WhatsApp/Meta) are **not** required in `.env` — admins add
-> them in the app (Settings → Channels). See [`CHANNELS.md`](CHANNELS.md). The
-> only Meta env keys you may want here enable the one-click "Connect with
-> Facebook" flow (`META_APP_ID`, `META_*_CONFIG_ID`, `VITE_META_APP_ID`).
+> ⚠️ **`VITE_*` variables are baked into the JS bundle at _build time_, not read on
+> the server.** They must be present in the environment that runs `npm run build`
+> (your CI job or local machine), then the compiled `public/build` is shipped. Setting
+> them only in the server `.env` has **no effect** on the frontend. If you change a
+> `VITE_*` value, rebuild and redeploy the assets.
+
+> Channel credentials (WhatsApp/Meta page tokens) are **not** required in `.env` —
+> admins add them in the app (Settings → Channels), stored encrypted. See
+> [`CHANNELS.md`](CHANNELS.md). Analytics, CSAT surveys and the reports need **no**
+> extra configuration — they work from the database out of the box.
 
 ## 8. First-time app initialization (SSH)
 
@@ -199,7 +215,8 @@ maintenance and **drains the queue** in short, self-terminating bursts.
    * * * * * php /home/USER/www/app.yourbrand.com/artisan schedule:run >> /dev/null 2>&1
    ```
 2. The scheduler ([`routes/console.php`](../routes/console.php)) already runs:
-   - `queue:work --stop-when-empty --tries=3 --max-time=50` (`->everyMinute()->withoutOverlapping()`)
+   - `queue:work --stop-when-empty --tries=3 --max-time=50` (`->everyMinute()->withoutOverlapping()`) — drains the DB queue (inbound/outbound messages, broadcasts, CSAT surveys).
+   - `analytics:snapshot` (`->dailyAt('00:20')`) — rolls up daily metrics for the analytics trend lines (the dashboard/reports otherwise compute live + cache).
    - daily housekeeping (prune batches, clear password resets, prune Sanctum tokens).
 
 No `queue:work` daemon, no Horizon, no Supervisor — those will be killed.
@@ -216,6 +233,9 @@ Then in a browser:
   processes within ~1 minute (the cron tick).
 - Realtime: open the inbox in two tabs; a new message streams in (needs Pusher).
 - Storage: upload an avatar/file and confirm it lands in your S3 bucket.
+- PWA: `curl -I https://app.yourbrand.com/manifest.webmanifest` → 200; in Chrome
+  DevTools → Application, the manifest + service worker register and an **Install**
+  prompt is offered. On mobile, the bottom tab bar + "More" sheet appear.
 
 ## 11. Backups & rollback
 
@@ -231,6 +251,25 @@ Then in a browser:
   then promote the same artifact to production.
 - Never point staging and production at the same database.
 
+## 13. PWA & service worker
+
+The app is an installable PWA. No build step is required beyond the normal asset
+build — the PWA files are **static and committed**, so they ship with every deploy:
+
+- `public/manifest.webmanifest`, `public/sw.js`, `public/offline.html`, `public/icons/*`.
+
+Operational notes:
+
+- **HTTPS is mandatory** for the service worker to register (it self-skips on plain
+  HTTP). Since step 13/1 enforces SSL, installability works in production; on a
+  staging subdomain ensure SSL is issued too.
+- **Updates:** navigations are network-first, so users always get fresh HTML; hashed
+  `public/build` assets are content-addressed, so new deploys are picked up
+  automatically. If you change the SW's own caching logic, bump the `CACHE`
+  constant at the top of `public/sw.js` to invalidate old caches.
+- **Don't** put `manifest.webmanifest`, `sw.js`, or `/icons` behind auth or a
+  rewrite — they must be reachable at the site root.
+
 ---
 
 ## Troubleshooting
@@ -244,3 +283,7 @@ Then in a browser:
 | Wrong scheme in links (http) | Proxy not trusted | Already handled (`trustProxies('*')` + `forceScheme` in prod); ensure `APP_URL=https://…` |
 | Webhooks rejected (403) | Signature/verify token mismatch | See [`CHANNELS.md`](CHANNELS.md) — verify token + `META_APP_SECRET` must match Meta |
 | Login throttled (429) | Rate limiter (5/min per email+IP) | Expected anti-brute-force; wait a minute |
+| Realtime/“Connect with Facebook” silently off | `VITE_*` not set at build time | Set `VITE_PUSHER_*` / `VITE_META_APP_ID` in CI, rebuild, redeploy `public/build` |
+| “Install app” never appears | Not HTTPS, or already installed, or manifest 404 | Ensure SSL + `/manifest.webmanifest` reachable; check DevTools → Application |
+| Stale UI after deploy | Old service-worker cache | Reload; if persistent, bump `CACHE` in `public/sw.js` and redeploy |
+| Dashboard trends flat | `analytics:snapshot` never ran | Confirm the cron tick; run `php artisan analytics:snapshot` once to backfill |

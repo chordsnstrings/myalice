@@ -38,7 +38,9 @@ QUEUE_CONNECTION=database
 FILESYSTEM_DISK=s3   AWS_* + AWS_ENDPOINT
 BROADCAST_CONNECTION=pusher   PUSHER_*
 ```
-Trust proxies and force HTTPS.
+Trust proxies and force HTTPS. **`VITE_*` keys (e.g. `VITE_PUSHER_*`, `VITE_META_APP_ID`)
+are baked in at build time** — set them in CI before `npm run build`, not just on the server.
+Channel tokens are added in-app (Settings → Channels), not in `.env`.
 
 ## E. Scheduling & queue (the SiteGround-specific core)
 10. Add **one cron entry** (Site Tools → Devs → Cron Jobs), every minute:
@@ -46,13 +48,18 @@ Trust proxies and force HTTPS.
     * * * * * php /home/USER/path/artisan schedule:run >> /dev/null 2>&1
     ```
 11. The scheduler (`routes/console.php`) already runs:
-    `queue:work --stop-when-empty --tries=3 --max-time=50` (`->everyMinute()->withoutOverlapping()`)
+    `queue:work --stop-when-empty --tries=3 --max-time=50` (`->everyMinute()->withoutOverlapping()`),
+    `analytics:snapshot` (`->dailyAt('00:20')`, analytics trend rollups),
     plus daily housekeeping (prune batches, clear resets, prune Sanctum tokens).
 12. Verify PHP `max_execution_time` is `0` or `>60`.
 
 ## F. TLS, verify, operate
 13. Issue **SSL** (Site Tools → Security → SSL Manager, Let's Encrypt); enforce HTTPS redirect.
-14. **Smoke test:** `/up` health route; enqueue + drain a job via cron; Pusher round-trip; S3 upload.
+    SSL also enables the **PWA** (service worker registers only over HTTPS). The PWA files
+    (`public/manifest.webmanifest`, `public/sw.js`, `public/offline.html`, `public/icons/*`)
+    are static and ship with the deploy — keep them reachable at the site root.
+14. **Smoke test:** `/up` health route; enqueue + drain a job via cron; Pusher round-trip;
+    S3 upload; `/manifest.webmanifest` → 200 + installable in Chrome.
 15. **Backups & rollback:** DB backups; keep a previous-release directory for instant rollback.
 16. **Staging → prod discipline:** deploy to staging, smoke, then promote. Separate DBs/credentials per env.
 
