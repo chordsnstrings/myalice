@@ -5,7 +5,6 @@ current pass. Credential-gated work lives in `BLOCKERS.md`.
 
 | Severity | Item | Owning phase |
 |----------|------|--------------|
-| med | Chatbot **runtime execution engine** (walk the graph at message time; max-step guard). Validation + publish gate are done. | P7 |
 | med | Migrate custom auth onto Fortify pipeline: **2FA**, lockout cooldown. Password reset is done. | P1 |
 | med | **Ticket auto-routing** engine (round-robin / load-balanced) + bot↔human handoff state. | P5 |
 | med | **Queued analytics aggregation** (replace seeded dashboard metrics with rollups). | P11 |
