@@ -35,6 +35,19 @@ return [
         ],
     ],
 
+    'meta' => [
+        // App-level Meta credentials enabling the Embedded Signup ("Connect with
+        // Facebook") one-click flow. When unset, the panel falls back to manual.
+        'app_id' => env('META_APP_ID'),
+        'app_secret' => env('META_APP_SECRET'),
+        'graph_version' => env('META_GRAPH_VERSION', 'v21.0'),
+        'config_id' => [
+            'whatsapp' => env('META_WA_CONFIG_ID'),
+            'messenger' => env('META_MESSENGER_CONFIG_ID'),
+            'instagram' => env('META_INSTAGRAM_CONFIG_ID'),
+        ],
+    ],
+
     'whatsapp' => [
         'token' => env('WHATSAPP_API_TOKEN'),
         'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),

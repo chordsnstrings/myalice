@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\BroadcastController;
+use App\Http\Controllers\ChannelConnectionController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\CommerceController;
 use App\Http\Controllers\ContactController;
@@ -75,6 +76,11 @@ Route::middleware(['auth', 'workspace'])->group(function () {
     Route::get('/settings/content', [SettingsController::class, 'content'])->name('settings.content');
     Route::get('/settings/hours', [SettingsController::class, 'hours'])->name('settings.hours');
     Route::get('/settings/channels', [SettingsController::class, 'channels'])->name('settings.channels');
+    Route::middleware('can:manage-channels')->group(function () {
+        Route::post('/settings/channels/{type}/connect', [ChannelConnectionController::class, 'connect'])->name('channels.connect');
+        Route::post('/settings/channels/{type}/embedded', [ChannelConnectionController::class, 'embedded'])->name('channels.embedded');
+        Route::delete('/settings/channels/{type}', [ChannelConnectionController::class, 'disconnect'])->name('channels.disconnect');
+    });
     Route::get('/settings/billing', [SettingsController::class, 'billing'])->middleware('can:manage-billing')->name('settings.billing');
     Route::get('/settings/wallet', [SettingsController::class, 'wallet'])->middleware('can:manage-billing')->name('settings.wallet');
     Route::get('/settings/developer', [SettingsController::class, 'developer'])->middleware('can:manage-api')->name('settings.developer');

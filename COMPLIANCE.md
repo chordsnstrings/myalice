@@ -10,6 +10,7 @@ addressed in this build. ✅ implemented · 🟡 partial/scaffolded · ⛔ crede
 | C-01 | WhatsApp 24h window expires → template mode | ✅ | `Inbox/Index` composer state machine; server `window_open` |
 | C-02 | Outbound to never-replied contact → template only | 🟡 | composer template state (server enforcement in P8) |
 | — | Webhook signature verification (X-Hub-Signature-256) | ✅ | `MetaWebhookController::signatureValid()` (WhatsApp/Messenger/Instagram) |
+| B9.2 | Channel onboarding panel (manual + Embedded Signup) | ✅ | `ChannelConnectionController` + `ChannelOnboarder`; Settings → Channels drawer |
 | C-03 | Wallet hits zero mid-broadcast | ✅(UI) | `Broadcasts/Create` pre-flight gate, insufficient-funds block |
 | C-04 | Same customer on multiple channels | 🟡 | channel dot disambiguation; merge/unmerge in PUNCHLIST |
 | C-05 | Store token expired/disconnected | ✅ | context pane + `Commerce/*` "reconnect" degradation |

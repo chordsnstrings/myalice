@@ -65,19 +65,36 @@ class SettingsController extends Controller
         ]);
     }
 
-    /** Channels list (B9.1). */
+    /** Channels list + onboarding metadata (B9.1 / B9.2). */
     public function channels(): Response
     {
         $connected = Channel::get()->keyBy('type');
         $all = ['whatsapp', 'instagram', 'messenger', 'telegram', 'line', 'viber', 'web'];
+        $meta = ['whatsapp', 'instagram', 'messenger'];
 
         $channels = collect($all)->map(fn ($type) => [
             'type' => $type,
             'name' => $connected[$type]->name ?? null,
+            'external_id' => $connected[$type]->external_id ?? null,
             'status' => $connected[$type]->status ?? 'not_connected',
+            'onboardable' => in_array($type, $meta, true),
+            'webhook_url' => in_array($type, $meta, true) ? url("/api/webhooks/{$type}") : null,
+            'verify_token' => in_array($type, $meta, true) ? config("services.{$type}.verify_token") : null,
         ]);
 
-        return Inertia::render('Settings/Channels', ['channels' => $channels]);
+        return Inertia::render('Settings/Channels', [
+            'channels' => $channels,
+            'embedded' => [
+                'configured' => filled(config('services.meta.app_id')),
+                'app_id' => config('services.meta.app_id'),
+                'graph_version' => config('services.meta.graph_version', 'v21.0'),
+                'config_id' => [
+                    'whatsapp' => config('services.meta.config_id.whatsapp'),
+                    'messenger' => config('services.meta.config_id.messenger'),
+                    'instagram' => config('services.meta.config_id.instagram'),
+                ],
+            ],
+        ]);
     }
 
     /** Billing & subscription (B11.5). */

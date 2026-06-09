@@ -2,14 +2,16 @@
 
 namespace App\Channels;
 
+use App\Models\Channel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
  * Facebook Messenger connector (M1). Sends via the Graph API Send API using a
- * page access token; normalizes the `entry[].messaging[]` inbound shape. Runs in
- * stub mode when no page token is configured.
+ * page access token; normalizes the `entry[].messaging[]` inbound shape. Prefers
+ * credentials onboarded via the admin panel, falling back to env; stub mode when
+ * neither is present.
  */
 class MessengerConnector implements ChannelConnector
 {
@@ -20,22 +22,30 @@ class MessengerConnector implements ChannelConnector
         return $this->type;
     }
 
+    protected function pageToken(): ?string
+    {
+        $stored = Channel::where('type', $this->type)->first()?->credentials['page_token'] ?? null;
+
+        return $stored ?? config("services.{$this->type}.page_token");
+    }
+
     public function isConfigured(): bool
     {
-        return filled(config("services.{$this->type}.page_token"));
+        return filled($this->pageToken());
     }
 
     public function send(string $to, array $payload): string
     {
         $text = (string) data_get($payload, 'text.body', data_get($payload, 'text', ''));
+        $token = $this->pageToken();
 
-        if (! $this->isConfigured()) {
+        if (blank($token)) {
             Log::info("[{$this->type} stub] would send", ['to' => $to, 'text' => $text]);
 
             return 'stub_'.Str::uuid();
         }
 
-        $token = (string) config("services.{$this->type}.page_token");
+        $token = (string) $token;
 
         $response = Http::post("https://graph.facebook.com/v21.0/me/messages?access_token={$token}", [
             'recipient' => ['id' => $to],
