@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Channels\ChannelManager;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,5 +26,12 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute(120)->by((string) $key);
         });
+
+        // Role-to-capability gates (§4.3). Keyed off the user's workspace role.
+        Gate::define('manage-billing', fn (User $u) => $u->workspace_role === 'owner');
+        Gate::define('manage-team', fn (User $u) => in_array($u->workspace_role, ['owner', 'manager'], true));
+        Gate::define('manage-channels', fn (User $u) => in_array($u->workspace_role, ['owner', 'manager'], true));
+        Gate::define('manage-bots', fn (User $u) => in_array($u->workspace_role, ['owner', 'manager'], true));
+        Gate::define('manage-api', fn (User $u) => in_array($u->workspace_role, ['owner', 'developer'], true));
     }
 }

@@ -63,9 +63,9 @@ Route::middleware(['auth', 'workspace'])->group(function () {
     Route::get('/settings/content', [SettingsController::class, 'content'])->name('settings.content');
     Route::get('/settings/hours', [SettingsController::class, 'hours'])->name('settings.hours');
     Route::get('/settings/channels', [SettingsController::class, 'channels'])->name('settings.channels');
-    Route::get('/settings/billing', [SettingsController::class, 'billing'])->name('settings.billing');
-    Route::get('/settings/wallet', [SettingsController::class, 'wallet'])->name('settings.wallet');
-    Route::get('/settings/developer', [SettingsController::class, 'developer'])->name('settings.developer');
+    Route::get('/settings/billing', [SettingsController::class, 'billing'])->middleware('can:manage-billing')->name('settings.billing');
+    Route::get('/settings/wallet', [SettingsController::class, 'wallet'])->middleware('can:manage-billing')->name('settings.wallet');
+    Route::get('/settings/developer', [SettingsController::class, 'developer'])->middleware('can:manage-api')->name('settings.developer');
     Route::get('/settings/profile', [SettingsController::class, 'profile'])->name('settings.profile');
     Route::get('/settings/widget', [SettingsController::class, 'widget'])->name('settings.widget');
     Route::get('/settings/qr', [SettingsController::class, 'qr'])->name('settings.qr');

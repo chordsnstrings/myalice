@@ -39,6 +39,12 @@ class HandleInertiaRequests extends Middleware
                     'wallet_balance' => (float) $workspace->wallet_balance,
                     'currency' => $workspace->currency,
                 ] : null,
+                'can' => $user ? [
+                    'manage_billing' => $user->can('manage-billing'),
+                    'manage_team' => $user->can('manage-team'),
+                    'manage_channels' => $user->can('manage-channels'),
+                    'manage_api' => $user->can('manage-api'),
+                ] : [],
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

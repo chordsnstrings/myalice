@@ -28,12 +28,14 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(RolesAndPermissionsSeeder::class);
+
         $workspace = Workspace::firstOrCreate(
             ['name' => 'Acme DTC'],
             ['plan' => 'business', 'wallet_balance' => 128.50, 'currency' => 'USD', 'timezone' => 'Asia/Dubai'],
         );
 
-        User::firstOrCreate(
+        $owner = User::firstOrCreate(
             ['email' => 'demo@myalice.test'],
             [
                 'workspace_id' => $workspace->id,
@@ -42,12 +44,14 @@ class DatabaseSeeder extends Seeder
                 'workspace_role' => 'owner',
             ],
         );
+        $owner->syncRoles('owner');
 
         foreach (['Maya Osei' => 'maya', 'Sara Lopez' => 'sara', 'Omar Aziz' => 'omar'] as $name => $slug) {
-            User::firstOrCreate(
+            $agent = User::firstOrCreate(
                 ['email' => "$slug@myalice.test"],
                 ['workspace_id' => $workspace->id, 'name' => $name, 'password' => Hash::make('password'), 'workspace_role' => 'agent'],
             );
+            $agent->syncRoles('agent');
         }
 
         // Scope all subsequent tenant-owned creates to this workspace.

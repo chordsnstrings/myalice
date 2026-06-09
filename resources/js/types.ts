@@ -16,8 +16,15 @@ export interface SharedWorkspace {
     currency: string;
 }
 
+export interface Capabilities {
+    manage_billing?: boolean;
+    manage_team?: boolean;
+    manage_channels?: boolean;
+    manage_api?: boolean;
+}
+
 export interface PageProps {
-    auth: { user: SharedAuthUser | null; workspace: SharedWorkspace | null };
+    auth: { user: SharedAuthUser | null; workspace: SharedWorkspace | null; can: Capabilities };
     flash: { success?: string; error?: string };
     locale: string;
     [key: string]: unknown;

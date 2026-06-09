@@ -10,6 +10,7 @@ beforeEach(function () {
         'name' => 'Tester',
         'email' => 'tester@test.test',
         'password' => bcrypt('x'),
+        'workspace_role' => 'owner',
     ]);
 });
 
