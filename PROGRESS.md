@@ -1,5 +1,16 @@
 # Build Progress Log
 
+## 2026-06-10 — UI revamp: PWA, mobile/responsive, micro-animations
+
+- **PWA:** installable `manifest.webmanifest` + GD-generated icons (incl. maskable), service worker (network-first navigations w/ `offline.html`, stale-while-revalidate assets), `lib/pwa.ts` registration + `beforeinstallprompt` capture, theme-color/apple meta. In-app **Install app** button in the mobile More sheet.
+- **Responsive shell:** sidebar hidden < lg; collapsing top bar; fixed **bottom tab bar** (Inbox/Contacts/Analytics/More) with active indicator + safe-area; **More** bottom sheet (secondary nav, reports, settings, theme, install, logout).
+- **Mobile Inbox:** single-pane flow — list → full-screen thread (back button) → customer context as a slide-up sheet; safe-area composer; full-width bubbles. 3-pane preserved on desktop.
+- **Responsive tables** (horizontal scroll), and tablet single-pane behaviour.
+- **Micro-animations:** motion toolkit (press, slide-up, pop-in, stagger, bubble-in) + reduced-motion; button active-press + focus ring; per-route page fade; palette pop; KPI stagger; animated bottom sheets.
+
+Verification: Pint · Larastan L6 · tsc · Pest **111 passing** · Vite build — all green. Screenshots confirmed desktop (3-pane) + mobile (login, dashboard, inbox list/thread/context sheet, More sheet) at 390px and 1440px.
+
+
 ## 2026-06-10 — Granular team-performance analytics (P11)
 
 - **Data capture:** conversation lifecycle timestamps (`first_response_at`, `assigned_at`, `resolved_at`, `awaiting_csat_at`) via `MessageObserver`/`ConversationObserver`; new `csat_ratings` and `metric_snapshots` tables; `csat_enabled` workspace toggle.

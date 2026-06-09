@@ -45,6 +45,14 @@ Tokens are defined once in `resources/css/app.css` (CSS-first Tailwind v4 `@them
 light/dark and mirror under RTL automatically via logical properties. Components compose tokens —
 never hardcoded hex. See `DECISIONS.md` (ADR-006) for the design language.
 
+## Mobile & PWA
+
+Fully responsive: a desktop sidebar collapses to a **bottom tab bar + "More" sheet** on mobile, and
+the Inbox switches to a single-pane flow (list → thread → slide-up context sheet). The app is an
+installable **PWA** — `public/manifest.webmanifest`, icons under `public/icons/`, and a service worker
+(`public/sw.js`) giving offline navigation (`public/offline.html`) and cached assets. The service
+worker only registers over HTTPS/localhost, so installability works once deployed behind SSL.
+
 ## Deployment
 
 See **`DEPLOYMENT.md`** for the SiteGround runbook (cron-queue, Memcached, S3, Pusher, SSL).
