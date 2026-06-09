@@ -213,8 +213,21 @@ export default function BroadcastCreate({ templates, audiences, wallet, total_co
                             <Button
                                 disabled={insufficient}
                                 onClick={() => {
-                                    toast(`Broadcast scheduled to ${recipients.toLocaleString()} contacts`, { tone: 'success' });
-                                    router.visit('/broadcasts');
+                                    router.post(
+                                        '/broadcasts',
+                                        {
+                                            name: template ? `${template.name} blast` : 'Broadcast',
+                                            message_template_id: templateId,
+                                            audience_id: audienceId,
+                                            recipients,
+                                            credit_cost: Number(cost.toFixed(2)),
+                                            schedule_at: when === 'later' ? null : null,
+                                        },
+                                        {
+                                            onSuccess: () =>
+                                                toast(`Broadcast queued to ${recipients.toLocaleString()} contacts`, { tone: 'success' }),
+                                        },
+                                    );
                                 }}
                             >
                                 {insufficient && <Lock className="size-4" />}

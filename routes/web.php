@@ -57,6 +57,7 @@ Route::middleware(['auth', 'workspace'])->group(function () {
     // Broadcasts & templates
     Route::get('/broadcasts', [BroadcastController::class, 'index'])->name('broadcasts');
     Route::get('/broadcasts/create', [BroadcastController::class, 'create'])->name('broadcasts.create');
+    Route::post('/broadcasts', [BroadcastController::class, 'store'])->name('broadcasts.store');
     Route::get('/templates', [TemplateController::class, 'index'])->name('templates');
 
     // Automations

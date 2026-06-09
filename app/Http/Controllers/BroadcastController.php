@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendBroadcast;
 use App\Models\Audience;
 use App\Models\Broadcast;
 use App\Models\Contact;
 use App\Models\MessageTemplate;
 use App\Support\Tenancy;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -58,5 +61,40 @@ class BroadcastController extends Controller
             'opted_out' => 2,
             'price_per_message' => 0.0125,
         ]);
+    }
+
+    /**
+     * Persist + dispatch a broadcast. The wallet is the gate: a send that costs
+     * more than the balance is blocked, not half-sent (C-03 / Part D money rule).
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'message_template_id' => ['nullable', 'integer', 'exists:message_templates,id'],
+            'audience_id' => ['nullable', 'integer', 'exists:audiences,id'],
+            'recipients' => ['required', 'integer', 'min:1'],
+            'credit_cost' => ['required', 'numeric', 'min:0'],
+            'schedule_at' => ['nullable', 'date'],
+        ]);
+
+        $workspace = Tenancy::currentOrFail();
+
+        if ((float) $data['credit_cost'] > (float) $workspace->wallet_balance) {
+            return back()->withErrors([
+                'credit_cost' => 'Insufficient wallet balance for this send. Top up to continue.',
+            ]);
+        }
+
+        $broadcast = Broadcast::create([
+            ...$data,
+            'status' => empty($data['schedule_at']) ? 'sending' : 'scheduled',
+        ]);
+
+        if (empty($data['schedule_at'])) {
+            SendBroadcast::dispatch($broadcast->id);
+        }
+
+        return redirect('/broadcasts')->with('success', 'Broadcast queued.');
     }
 }
