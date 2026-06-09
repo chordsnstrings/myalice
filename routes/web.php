@@ -1,8 +1,15 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\AutomationController;
+use App\Http\Controllers\BroadcastController;
+use App\Http\Controllers\ChatbotController;
+use App\Http\Controllers\CommerceController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InboxController;
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\TemplateController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -12,6 +19,11 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register']);
+
+    Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.request');
+    Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->name('password.email');
+    Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->name('password.reset');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
 });
 
 Route::get('/', fn () => redirect(auth()->check() ? '/inbox' : '/login'));
@@ -20,63 +32,39 @@ Route::get('/', fn () => redirect(auth()->check() ? '/inbox' : '/login'));
 Route::middleware(['auth', 'workspace'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
+    Route::get('/onboarding', fn () => Inertia::render('Onboarding/Wizard'))->name('onboarding');
+
     Route::get('/inbox', [InboxController::class, 'index'])->name('inbox');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Polished placeholders for sections delivered in later phases.
-    $placeholder = fn (array $p) => fn () => Inertia::render('Placeholder', $p);
+    // CRM
+    Route::get('/contacts', [ContactController::class, 'index'])->name('contacts');
+    Route::get('/contacts/{contact}', [ContactController::class, 'show'])->name('contacts.show');
 
-    Route::get('/contacts', $placeholder([
-        'title' => 'Contacts', 'icon' => 'Users', 'spec' => 'M8 · B4',
-        'description' => 'A commerce-aware CRM: profiles, cross-channel identity, segments and CSV import.',
-        'cta' => 'Import contacts',
-    ]))->name('contacts');
+    // Chatbots
+    Route::get('/chatbots', [ChatbotController::class, 'index'])->name('chatbots');
+    Route::get('/chatbots/{chatbot}/edit', [ChatbotController::class, 'edit'])->name('chatbots.edit');
 
-    Route::get('/chatbots', $placeholder([
-        'title' => 'Chatbots', 'icon' => 'Bot', 'spec' => 'M12 · B5',
-        'description' => 'A no-code visual flow builder to automate FAQs, lead capture and guided selling.',
-        'cta' => 'New chatbot',
-    ]))->name('chatbots');
+    // Broadcasts & templates
+    Route::get('/broadcasts', [BroadcastController::class, 'index'])->name('broadcasts');
+    Route::get('/broadcasts/create', [BroadcastController::class, 'create'])->name('broadcasts.create');
+    Route::get('/templates', [TemplateController::class, 'index'])->name('templates');
 
-    Route::get('/broadcasts', $placeholder([
-        'title' => 'Broadcasts', 'icon' => 'Megaphone', 'spec' => 'M14 · B6',
-        'description' => 'Compliant, costed WhatsApp campaigns with a wallet pre-flight before every send.',
-        'cta' => 'New broadcast',
-    ]))->name('broadcasts');
+    // Automations
+    Route::get('/automations', [AutomationController::class, 'index'])->name('automations');
 
-    Route::get('/broadcasts/create', $placeholder([
-        'title' => 'New broadcast', 'icon' => 'Megaphone', 'spec' => 'B6.2',
-        'description' => 'Template → audience → schedule → review & cost. Money is shown before you spend.',
-        'cta' => 'Start',
-    ]));
+    // Commerce
+    Route::get('/orders', [CommerceController::class, 'orders'])->name('orders');
+    Route::get('/products', [CommerceController::class, 'products'])->name('products');
 
-    Route::get('/automations', $placeholder([
-        'title' => 'Automations', 'icon' => 'Workflow', 'spec' => 'M15 · B7',
-        'description' => 'Lifecycle triggers: abandoned cart, order confirmation, shipping, upsell and re-engagement.',
-        'cta' => 'New automation',
-    ]))->name('automations');
-
-    Route::get('/orders', $placeholder([
-        'title' => 'Commerce', 'icon' => 'ShoppingBag', 'spec' => 'M9–M11 · B8',
-        'description' => 'Sync your store catalog and orders; turn conversations into paid orders.',
-        'cta' => 'Connect a store',
-    ]))->name('orders');
-
-    Route::get('/settings', $placeholder([
-        'title' => 'Settings', 'icon' => 'Settings', 'spec' => 'B11',
-        'description' => 'Workspace, team & roles, business hours, billing, wallet, developer API and more.',
-        'cta' => 'Open workspace settings',
-    ]))->name('settings');
-
-    Route::get('/settings/wallet', $placeholder([
-        'title' => 'Wallet', 'icon' => 'Wallet', 'spec' => 'B11.6',
-        'description' => 'Prepaid credits, top-up, auto-recharge and an auditable ledger.',
-        'cta' => 'Top up',
-    ]));
-
-    Route::get('/settings/profile', $placeholder([
-        'title' => 'Profile', 'icon' => 'User', 'spec' => 'B11.8',
-        'description' => 'Your name, avatar, password, 2FA, language, density and theme.',
-        'cta' => 'Edit profile',
-    ]));
+    // Settings cluster
+    Route::get('/settings', [SettingsController::class, 'workspace'])->name('settings');
+    Route::get('/settings/team', [SettingsController::class, 'team'])->name('settings.team');
+    Route::get('/settings/content', [SettingsController::class, 'content'])->name('settings.content');
+    Route::get('/settings/hours', [SettingsController::class, 'hours'])->name('settings.hours');
+    Route::get('/settings/channels', [SettingsController::class, 'channels'])->name('settings.channels');
+    Route::get('/settings/billing', [SettingsController::class, 'billing'])->name('settings.billing');
+    Route::get('/settings/wallet', [SettingsController::class, 'wallet'])->name('settings.wallet');
+    Route::get('/settings/developer', [SettingsController::class, 'developer'])->name('settings.developer');
+    Route::get('/settings/profile', [SettingsController::class, 'profile'])->name('settings.profile');
 });

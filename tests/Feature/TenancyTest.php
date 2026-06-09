@@ -43,8 +43,23 @@ it('binds the active workspace for authenticated requests', function () {
     $this->actingAs($user)
         ->get('/inbox')
         ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('Inbox/Index'));
+});
+
+it('never leaks one workspace\'s contacts into another (HTTP layer)', function () {
+    $wsA = Workspace::create(['name' => 'A']);
+    $wsB = Workspace::create(['name' => 'B']);
+    $userA = User::create(['workspace_id' => $wsA->id, 'name' => 'A', 'email' => 'a@a.test', 'password' => bcrypt('x')]);
+
+    Contact::create(['workspace_id' => $wsA->id, 'name' => 'Alice Only']);
+    Contact::create(['workspace_id' => $wsB->id, 'name' => 'Bob Only']);
+
+    $this->actingAs($userA)
+        ->get('/contacts')
+        ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('Inbox/Index')
-            ->where('conversations.0.contact.name', 'Layla Hassan')
+            ->component('Contacts/Index')
+            ->has('contacts', 1)
+            ->where('contacts.0.name', 'Alice Only')
         );
 });

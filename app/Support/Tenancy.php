@@ -27,6 +27,15 @@ class Tenancy
         return static::$current?->id;
     }
 
+    /**
+     * The active workspace, guaranteed. Use inside routes behind the
+     * `workspace` middleware, where a tenant is always resolved.
+     */
+    public static function currentOrFail(): Workspace
+    {
+        return static::$current ?? throw new \RuntimeException('No active workspace for this request.');
+    }
+
     public static function clear(): void
     {
         static::$current = null;

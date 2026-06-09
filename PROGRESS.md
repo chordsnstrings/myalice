@@ -1,5 +1,24 @@
 # Build Progress Log
 
+## 2026-06-09 — Full feature breadth (P1, P4–P11, P14)
+
+### What was built
+- **Data layer (§6):** 16 tenant-scoped models + migrations — Channel, Conversation, Message, Tag, QuickReply, BusinessHour, StoreConnection, Product, Order, MessageTemplate, Audience, Broadcast, Chatbot, AutomationRule, Subscription, WalletTransaction. Rich demo seeder populating a full workspace.
+- **Inbox** now data-driven from tenant-scoped Conversation/Message records.
+- **Auth (P1):** forgot-password + reset (real password broker, non-enumerating) and the **onboarding wizard** (B1.5).
+- **CRM (P5/B4):** Contacts list (search, bulk-select bar) + Contact profile (tabs, orders, GDPR delete confirm).
+- **Commerce (P6/B8):** Orders table + Product catalog (out-of-stock handling).
+- **Broadcasts (P8/B6):** list, **guided composer with the wallet pre-flight gate** (recipient/exclusion breakdown, cost-before-commit, insufficient-funds block, C-03), and the template manager (approval/quality/rejection states, C-09).
+- **Automations (P9/B7):** rule list with toggles + recipe gallery.
+- **Chatbots (P7/B5):** bot list + a visual **flow-builder canvas** (palette, nodes, connectors, inspector, Test/Publish).
+- **Settings (P14/B11):** all 9 sub-pages on a shared sub-nav — workspace, team & roles, channels, business hours, quick replies & tags, billing (plan cards), wallet (ledger + auto-recharge), developer (API keys + webhooks), profile & notifications.
+- **Primitives added:** Table, Tabs, Switch, Page container, SettingsLayout.
+
+### Verification (all green)
+- `pint` clean · `phpstan` L6 0 errors · `tsc` clean · `pest` **30 passing, 227 assertions** (incl. a parameterized render test for all 20 authed pages + HTTP-layer tenant isolation on /contacts).
+- `npm run build` succeeds; `migrate:fresh --seed` clean.
+
+
 ## 2026-06-09 — Foundation, design system, auth & Inbox UI
 
 ### What was built
