@@ -48,3 +48,11 @@ never hardcoded hex. See `DECISIONS.md` (ADR-006) for the design language.
 ## Deployment
 
 See **`DEPLOYMENT.md`** for the SiteGround runbook (cron-queue, Memcached, S3, Pusher, SSL).
+
+## Documentation
+
+Developer guides live in **[`docs/`](docs/)**:
+
+- **[docs/SETUP.md](docs/SETUP.md)** — local setup, env reference, project layout, tenancy model.
+- **[docs/DEPLOY_SITEGROUND.md](docs/DEPLOY_SITEGROUND.md)** — step-by-step SiteGround deploy.
+- **[docs/CHANNELS.md](docs/CHANNELS.md)** — connect WhatsApp / Messenger / Instagram / Web widget, and add new channels.
