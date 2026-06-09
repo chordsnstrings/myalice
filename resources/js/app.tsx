@@ -1,4 +1,5 @@
 import './bootstrap';
+import './echo';
 import { createInertiaApp, type ResolvedComponent } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import { ToastProvider } from '@/components/ui/Toast';

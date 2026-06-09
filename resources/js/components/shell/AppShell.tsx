@@ -24,6 +24,7 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Avatar } from '@/components/ui/Avatar';
 import { CommandPalette } from './CommandPalette';
+import { OfflineBanner } from './OfflineBanner';
 import type { PageProps } from '@/types';
 
 interface NavItem {
@@ -125,6 +126,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
 
             {/* Main column */}
             <div className="flex min-w-0 flex-1 flex-col">
+                <OfflineBanner />
                 {/* Top bar (B2) */}
                 <header className="flex h-14 shrink-0 items-center gap-3 border-b border-default bg-surface px-5">
                     <div className="flex items-center gap-2">

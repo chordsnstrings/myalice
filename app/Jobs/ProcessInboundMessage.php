@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\MessageCreated;
 use App\Models\Contact;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -49,13 +50,16 @@ class ProcessInboundMessage implements ShouldQueue
             ['status' => 'open', 'window_open' => true],
         );
 
-        Message::create([
+        $created = Message::create([
             'conversation_id' => $conversation->id,
             'direction' => 'in',
             'author' => 'customer',
             'body' => $this->message['body'],
             'sent_at' => $this->message['sent_at'] ?? now(),
         ]);
+
+        // Stream the new message to the workspace inbox in real time (A10.7).
+        MessageCreated::dispatch($created);
 
         // Inbound reopens a resolved ticket and (re)opens the 24h service window.
         $conversation->update([

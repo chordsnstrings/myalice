@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Head, usePage } from '@inertiajs/react';
 import {
     Search,
     Smile,
@@ -27,7 +27,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { FilteredEmpty } from '@/components/ui/States';
 import { useToast } from '@/components/ui/Toast';
 import { cn, relativeTime, money } from '@/lib/utils';
-import type { Conversation, Message } from '@/types';
+import type { Conversation, Message, PageProps } from '@/types';
 
 interface Props {
     conversations: Conversation[];
@@ -56,6 +56,26 @@ export default function InboxIndex({ conversations, messages: seed }: Props) {
     const [draft, setDraft] = useState('');
     const [contextOpen, setContextOpen] = useState(true);
     const endRef = useRef<HTMLDivElement>(null);
+    const workspaceId = usePage<PageProps>().props.auth.workspace?.id;
+
+    // Live inbound messages over the workspace private channel (A10.7). No-op
+    // when the realtime broker is unconfigured (graceful degrade).
+    useEffect(() => {
+        const echo = window.Echo;
+        if (!echo || !workspaceId) return;
+
+        const channel = echo.private(`workspace.${workspaceId}`);
+        channel.listen('.message.created', (e: { conversation_id: number } & Message) => {
+            setThreads((t) => ({
+                ...t,
+                [e.conversation_id]: [...(t[e.conversation_id] ?? []), e],
+            }));
+        });
+
+        return () => {
+            echo.leave(`workspace.${workspaceId}`);
+        };
+    }, [workspaceId]);
 
     const selected = conversations.find((c) => c.id === selectedId) ?? null;
     const messages = selectedId ? (threads[selectedId] ?? []) : [];
