@@ -9,6 +9,9 @@ use App\Http\Controllers\CommerceController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InboxController;
+use App\Http\Controllers\Reports\AgentPerformanceController;
+use App\Http\Controllers\Reports\CsatReportController;
+use App\Http\Controllers\Reports\SalesReportController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TemplateController;
 use Illuminate\Http\Request;
@@ -46,6 +49,14 @@ Route::middleware(['auth', 'workspace'])->group(function () {
 
     Route::get('/inbox', [InboxController::class, 'index'])->name('inbox');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Manager reports (B10.2–B10.4)
+    Route::middleware('can:manage-team')->prefix('reports')->name('reports.')->group(function () {
+        Route::get('/agents', [AgentPerformanceController::class, 'index'])->name('agents');
+        Route::get('/agents/{agent}', [AgentPerformanceController::class, 'show'])->name('agents.show');
+        Route::get('/sales', [SalesReportController::class, 'index'])->name('sales');
+        Route::get('/csat', [CsatReportController::class, 'index'])->name('csat');
+    });
 
     // CRM
     Route::get('/contacts', [ContactController::class, 'index'])->name('contacts');

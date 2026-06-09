@@ -22,6 +22,9 @@ it('renders every authenticated page', function (string $url, string $component)
 })->with([
     ['/inbox', 'Inbox/Index'],
     ['/dashboard', 'Dashboard'],
+    ['/reports/agents', 'Reports/AgentPerformance'],
+    ['/reports/sales', 'Reports/Sales'],
+    ['/reports/csat', 'Reports/Csat'],
     ['/contacts', 'Contacts/Index'],
     ['/chatbots', 'Chatbots/Index'],
     ['/broadcasts', 'Broadcasts/Index'],

@@ -9,5 +9,9 @@
     "nav.settings": "الإعدادات",
     "common.search": "بحث…",
     "common.save": "حفظ التغييرات",
-    "common.language": "اللغة"
+    "common.language": "اللغة",
+    "nav.reports": "التقارير",
+    "nav.agents": "أداء الوكلاء",
+    "nav.sales": "المبيعات",
+    "nav.csat": "رضا العملاء"
 }

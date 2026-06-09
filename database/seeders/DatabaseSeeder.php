@@ -9,6 +9,7 @@ use App\Models\Channel;
 use App\Models\Chatbot;
 use App\Models\Contact;
 use App\Models\Conversation;
+use App\Models\CsatRating;
 use App\Models\Message;
 use App\Models\MessageTemplate;
 use App\Models\Order;
@@ -127,6 +128,81 @@ class DatabaseSeeder extends Seeder
                     'source' => 'chat',
                     'line_items' => [['title' => $products->random()->title, 'qty' => 1]],
                 ]);
+            }
+        }
+
+        // ---- Historical spread for analytics (90 days, agent-skewed) ----
+        $contactIds = Contact::pluck('id')->all();
+        $agentIds = User::where('workspace_id', $workspace->id)->orderBy('id')->pluck('id')->all();
+        // Per-agent skew: [base response seconds, csat bias] — differentiates the leaderboard.
+        $skew = [];
+        foreach (array_values($agentIds) as $idx => $aid) {
+            $skew[$aid] = [60 + $idx * 90, 5 - $idx * 0.4]; // first agent fastest / highest CSAT
+        }
+        $comments = [
+            'Super fast and helpful, thank you!', 'Sorted my issue in minutes.', 'Great service as always.',
+            'Took a while but got there.', 'Friendly and clear.', 'Could have been quicker.',
+            'Loved the product recommendation.', 'Resolved my order problem perfectly.',
+        ];
+        $orderSeq = 2000;
+
+        for ($n = 0; $n < 220; $n++) {
+            $createdAt = now()->subDays(rand(0, 89))->subMinutes(rand(0, 1439));
+            $channel = $channels[array_rand($channels)];
+            $agentId = $agentIds[array_rand($agentIds)];
+            [$base, $csatBias] = $skew[$agentId];
+
+            $roll = rand(1, 100);
+            $status = $roll <= 60 ? 'resolved' : ($roll <= 85 ? 'open' : 'pending');
+
+            $responseSecs = max(20, (int) ($base + rand(-40, 600)));
+            $firstResponseAt = $createdAt->clone()->addSeconds($responseSecs);
+            $resolvedAt = $status === 'resolved' ? $createdAt->clone()->addSeconds(rand(3600, 172800)) : null;
+            $lastAt = $resolvedAt ?? $firstResponseAt;
+
+            $conv = Conversation::create([
+                'contact_id' => $contactIds[array_rand($contactIds)],
+                'channel' => $channel,
+                'status' => $status,
+                'assignee_id' => $agentId,
+                'assigned_at' => $createdAt->clone()->addSeconds(rand(0, 300)),
+                'first_response_at' => $firstResponseAt,
+                'resolved_at' => $resolvedAt,
+                'window_open' => $status !== 'resolved',
+                'last_message' => 'Thanks!',
+                'last_message_at' => $lastAt,
+            ]);
+            // Back-date created_at (query update bypasses observers/timestamps).
+            Conversation::where('id', $conv->id)->update(['created_at' => $createdAt, 'updated_at' => $lastAt]);
+
+            Message::create(['conversation_id' => $conv->id, 'direction' => 'in', 'author' => 'customer', 'body' => 'Hello, I need help.', 'sent_at' => $createdAt]);
+            Message::create(['conversation_id' => $conv->id, 'direction' => 'out', 'author' => 'agent', 'body' => 'Happy to help!', 'status' => 'read', 'sent_at' => $firstResponseAt]);
+
+            // CSAT for ~70% of resolved, rating biased by agent.
+            if ($resolvedAt && rand(1, 100) <= 70) {
+                $rating = (int) max(1, min(5, round($csatBias + (rand(-15, 10) / 10))));
+                CsatRating::create([
+                    'conversation_id' => $conv->id,
+                    'agent_id' => $agentId,
+                    'channel' => $channel,
+                    'rating' => $rating,
+                    'comment' => rand(1, 100) <= 30 ? $comments[array_rand($comments)] : null,
+                    'rated_at' => $resolvedAt->clone()->addSeconds(rand(300, 3600)),
+                ]);
+            }
+
+            // ~35% of resolved produce a chat order in range.
+            if ($resolvedAt && rand(1, 100) <= 35) {
+                $product = $products->random();
+                $order = Order::create([
+                    'contact_id' => $conv->contact_id,
+                    'number' => '#'.(++$orderSeq),
+                    'total' => $product->price,
+                    'status' => ['paid', 'fulfilled', 'delivered'][rand(0, 2)],
+                    'source' => 'chat',
+                    'line_items' => [['title' => $product->title, 'qty' => 1]],
+                ]);
+                Order::where('id', $order->id)->update(['created_at' => $resolvedAt, 'updated_at' => $resolvedAt]);
             }
         }
 

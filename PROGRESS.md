@@ -1,5 +1,15 @@
 # Build Progress Log
 
+## 2026-06-10 — Granular team-performance analytics (P11)
+
+- **Data capture:** conversation lifecycle timestamps (`first_response_at`, `assigned_at`, `resolved_at`, `awaiting_csat_at`) via `MessageObserver`/`ConversationObserver`; new `csat_ratings` and `metric_snapshots` tables; `csat_enabled` workspace toggle.
+- **CSAT surveys (send + capture):** `SendCsatSurvey` job dispatched on resolve; numeric 1–5 reply captured in `ProcessInboundMessage` → `CsatRating` (no reopen); non-numeric replies reopen as normal.
+- **AnalyticsService (cached, hybrid):** real KPIs, daily series, agent leaderboard, agent drill-down (response/resolution distribution, active-hours proxy, CSAT comments), sales/conversion, CSAT report, channel breakdown, response distribution. `analytics:snapshot` command + nightly schedule fill `metric_snapshots` (scale path).
+- **Reports + filters:** rewrote the Dashboard to real data; added `/reports/{agents,agents/{id},sales,csat}` (manager-gated) with a shared **functional** date-range + channel + team `FilterBar`, dependency-free chart components, REPORTS nav group, and CSV export.
+
+Verification: Pint clean · Larastan L6 0 errors · tsc clean · **Pest 111 passing / 494 assertions** · Vite build ok. New tests: AnalyticsService correctness + filters, lifecycle observers, CSAT survey send/capture, reports (manager gate + tenant isolation + CSV), snapshot idempotency/isolation.
+
+
 ## 2026-06-09 — Backend engines (money + automation + import)
 
 - **Wallet + broadcast engine (P8):** `WalletService` (atomic debit/credit, no-negative, audit ledger); `SendBroadcast` debits up front and pauses on mid-send drain (C-03); server-side wallet gate on broadcast create.

@@ -3,7 +3,11 @@
 namespace App\Providers;
 
 use App\Channels\ChannelManager;
+use App\Models\Conversation;
+use App\Models\Message;
 use App\Models\User;
+use App\Observers\ConversationObserver;
+use App\Observers\MessageObserver;
 use App\Support\Plans;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -55,5 +59,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Plan-based feature gate (§10). Used by the nav lock and feature routes.
         Gate::define('use-automation', fn (User $u) => Plans::includes(optional($u->currentWorkspace)->plan ?? 'premium', 'automation'));
+
+        // Lifecycle capture for analytics (first-response / resolution / assignment).
+        Conversation::observe(ConversationObserver::class);
+        Message::observe(MessageObserver::class);
     }
 }

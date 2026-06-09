@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $currency
  * @property numeric-string $wallet_balance
  * @property string $billing_status
+ * @property bool $csat_enabled
  */
 class Workspace extends Model
 {
@@ -26,6 +27,7 @@ class Workspace extends Model
         'currency',
         'wallet_balance',
         'billing_status',
+        'csat_enabled',
     ];
 
     /** @return array<string, string> */
@@ -33,6 +35,7 @@ class Workspace extends Model
     {
         return [
             'wallet_balance' => 'decimal:2',
+            'csat_enabled' => 'boolean',
         ];
     }
 

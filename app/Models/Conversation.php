@@ -20,6 +20,10 @@ use Illuminate\Support\Carbon;
  * @property bool $sla_breaching
  * @property string|null $last_message
  * @property Carbon|null $last_message_at
+ * @property Carbon|null $first_response_at
+ * @property Carbon|null $assigned_at
+ * @property Carbon|null $resolved_at
+ * @property Carbon|null $awaiting_csat_at
  * @property-read Contact $contact
  */
 class Conversation extends Model
@@ -27,12 +31,24 @@ class Conversation extends Model
     use BelongsToWorkspace;
 
     /** @var list<string> */
-    protected $fillable = ['workspace_id', 'contact_id', 'channel', 'status', 'assignee_id', 'unread', 'window_open', 'sla_breaching', 'last_message', 'last_message_at'];
+    protected $fillable = [
+        'workspace_id', 'contact_id', 'channel', 'status', 'assignee_id', 'unread',
+        'window_open', 'sla_breaching', 'last_message', 'last_message_at',
+        'first_response_at', 'assigned_at', 'resolved_at', 'awaiting_csat_at',
+    ];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['window_open' => 'boolean', 'sla_breaching' => 'boolean', 'last_message_at' => 'datetime'];
+        return [
+            'window_open' => 'boolean',
+            'sla_breaching' => 'boolean',
+            'last_message_at' => 'datetime',
+            'first_response_at' => 'datetime',
+            'assigned_at' => 'datetime',
+            'resolved_at' => 'datetime',
+            'awaiting_csat_at' => 'datetime',
+        ];
     }
 
     /** @return BelongsTo<Contact, $this> */
@@ -41,9 +57,21 @@ class Conversation extends Model
         return $this->belongsTo(Contact::class);
     }
 
+    /** @return BelongsTo<User, $this> */
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assignee_id');
+    }
+
     /** @return HasMany<Message, $this> */
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class);
+    }
+
+    /** @return HasMany<CsatRating, $this> */
+    public function csatRatings(): HasMany
+    {
+        return $this->hasMany(CsatRating::class);
     }
 }

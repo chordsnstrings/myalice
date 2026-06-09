@@ -9,5 +9,9 @@
     "nav.settings": "Configurações",
     "common.search": "Buscar…",
     "common.save": "Salvar alterações",
-    "common.language": "Idioma"
+    "common.language": "Idioma",
+    "nav.reports": "Relatórios",
+    "nav.agents": "Desempenho",
+    "nav.sales": "Vendas",
+    "nav.csat": "CSAT"
 }

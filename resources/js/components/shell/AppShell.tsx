@@ -8,6 +8,9 @@ import {
     Workflow,
     ShoppingBag,
     BarChart3,
+    Gauge,
+    DollarSign,
+    Star,
     Settings,
     Search,
     Bell,
@@ -36,6 +39,8 @@ interface NavItem {
     badge?: number;
     /** Plan feature this item requires; absent = always available. */
     feature?: string;
+    /** Capability required to see this item (e.g. manager reports). */
+    managerOnly?: boolean;
 }
 
 const nav: NavItem[] = [
@@ -46,6 +51,12 @@ const nav: NavItem[] = [
     { key: 'nav.automations', href: '/automations', icon: Workflow, feature: 'automation' },
     { key: 'nav.commerce', href: '/orders', icon: ShoppingBag },
     { key: 'nav.analytics', href: '/dashboard', icon: BarChart3 },
+];
+
+const reportsNav: NavItem[] = [
+    { key: 'nav.agents', href: '/reports/agents', icon: Gauge, managerOnly: true },
+    { key: 'nav.sales', href: '/reports/sales', icon: DollarSign, managerOnly: true },
+    { key: 'nav.csat', href: '/reports/csat', icon: Star, managerOnly: true },
 ];
 
 const languages = [
@@ -64,9 +75,56 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
     const workspace = props.auth.workspace;
     const user = props.auth.user;
     const features = props.auth.features ?? [];
+    const can = props.auth.can ?? {};
     const lowWallet = (workspace?.wallet_balance ?? 0) < 25;
 
     const isActive = (href: string) => url.startsWith(href);
+
+    const renderItem = (item: NavItem) => {
+        const active = isActive(item.href);
+        const Icon = item.icon;
+        const locked = !!item.feature && !features.includes(item.feature);
+        const className = cn(
+            'group relative flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-start text-[13px] font-medium transition-colors',
+            active ? 'bg-accent-subtle text-accent' : 'text-secondary hover:bg-surface-hover hover:text-primary',
+        );
+        const inner = (
+            <>
+                {active && (
+                    <span className="absolute -start-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-e-full bg-accent" />
+                )}
+                <Icon className="size-[18px] shrink-0" />
+                <span className="flex-1">{t(item.key)}</span>
+                {locked ? (
+                    <Lock className="size-3.5 text-tertiary" />
+                ) : item.badge ? (
+                    <span className="rounded-full bg-accent px-1.5 text-[11px] font-semibold text-accent-contrast">
+                        {item.badge}
+                    </span>
+                ) : null}
+            </>
+        );
+
+        // Locked → upgrade explainer, never a dead end (B2 / C-17).
+        return locked ? (
+            <button
+                key={item.href}
+                className={className}
+                onClick={() =>
+                    toast('Automations is on the Business plan. Upgrade to enable it.', {
+                        tone: 'info',
+                        action: { label: 'Upgrade', onClick: () => router.visit('/settings/billing') },
+                    })
+                }
+            >
+                {inner}
+            </button>
+        ) : (
+            <Link key={item.href} href={item.href} className={className}>
+                {inner}
+            </Link>
+        );
+    };
 
     return (
         <div className="flex h-screen overflow-hidden bg-canvas text-primary">
@@ -79,53 +137,16 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                 </div>
 
                 <nav className="flex-1 space-y-0.5 px-3 py-2">
-                    {nav.map((item) => {
-                        const active = isActive(item.href);
-                        const Icon = item.icon;
-                        const locked = !!item.feature && !features.includes(item.feature);
-                        const className = cn(
-                            'group relative flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-start text-[13px] font-medium transition-colors',
-                            active
-                                ? 'bg-accent-subtle text-accent'
-                                : 'text-secondary hover:bg-surface-hover hover:text-primary',
-                        );
-                        const inner = (
-                            <>
-                                {active && (
-                                    <span className="absolute -start-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-e-full bg-accent" />
-                                )}
-                                <Icon className="size-[18px] shrink-0" />
-                                <span className="flex-1">{t(item.key)}</span>
-                                {locked ? (
-                                    <Lock className="size-3.5 text-tertiary" />
-                                ) : item.badge ? (
-                                    <span className="rounded-full bg-accent px-1.5 text-[11px] font-semibold text-accent-contrast">
-                                        {item.badge}
-                                    </span>
-                                ) : null}
-                            </>
-                        );
+                    {nav.map(renderItem)}
 
-                        // Locked → upgrade explainer, never a dead end (B2 / C-17).
-                        return locked ? (
-                            <button
-                                key={item.href}
-                                className={className}
-                                onClick={() => {
-                                    toast('Automations is on the Business plan. Upgrade to enable it.', {
-                                        tone: 'info',
-                                        action: { label: 'Upgrade', onClick: () => router.visit('/settings/billing') },
-                                    });
-                                }}
-                            >
-                                {inner}
-                            </button>
-                        ) : (
-                            <Link key={item.href} href={item.href} className={className}>
-                                {inner}
-                            </Link>
-                        );
-                    })}
+                    {can.manage_team && (
+                        <>
+                            <p className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+                                {t('nav.reports')}
+                            </p>
+                            {reportsNav.map(renderItem)}
+                        </>
+                    )}
                 </nav>
 
                 <div className="border-t border-default p-3">

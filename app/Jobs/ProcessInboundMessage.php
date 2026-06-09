@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Events\MessageCreated;
 use App\Models\Contact;
 use App\Models\Conversation;
+use App\Models\CsatRating;
 use App\Models\Message;
 use App\Models\Workspace;
 use App\Services\RoutingService;
@@ -56,23 +57,48 @@ class ProcessInboundMessage implements ShouldQueue
             app(RoutingService::class)->assign($conversation);
         }
 
+        $body = $this->message['body'];
+
         $created = Message::create([
             'conversation_id' => $conversation->id,
             'direction' => 'in',
             'author' => 'customer',
-            'body' => $this->message['body'],
+            'body' => $body,
             'sent_at' => $this->message['sent_at'] ?? now(),
         ]);
 
         // Stream the new message to the workspace inbox in real time (A10.7).
         MessageCreated::dispatch($created);
 
+        // A numeric reply to a pending CSAT survey records a rating and does NOT
+        // reopen the resolved conversation (B10.4).
+        if ($conversation->awaiting_csat_at !== null && preg_match('/^\s*([1-5])\s*$/', $body, $m)) {
+            CsatRating::create([
+                'conversation_id' => $conversation->id,
+                'agent_id' => $conversation->assignee_id,
+                'channel' => $conversation->channel,
+                'rating' => (int) $m[1],
+                'rated_at' => now(),
+            ]);
+
+            $conversation->update([
+                'awaiting_csat_at' => null,
+                'unread' => $conversation->unread + 1,
+                'last_message' => $body,
+                'last_message_at' => now(),
+            ]);
+
+            Tenancy::clear();
+
+            return;
+        }
+
         // Inbound reopens a resolved ticket and (re)opens the 24h service window.
         $conversation->update([
             'status' => $conversation->status === 'resolved' ? 'open' : $conversation->status,
             'window_open' => true,
             'unread' => $conversation->unread + 1,
-            'last_message' => $this->message['body'],
+            'last_message' => $body,
             'last_message_at' => now(),
         ]);
 
