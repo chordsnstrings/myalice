@@ -1,5 +1,18 @@
 # Build Progress Log
 
+## 2026-06-09 — Breadth to all phases (P3, P12, P13, P14, RBAC, realtime, hardening)
+
+- **Channels (P3):** ChannelConnector interface + WhatsApp connector (Graph API, stub mode), idempotent webhook (verify + dedupe + enqueue), queued inbound/outbound jobs.
+- **Developer API (P12):** Sanctum REST endpoints (contacts/conversations), API resources, per-workspace rate limiter.
+- **Entry points (P13):** web chat widget config with live preview + install snippet; QR/click-to-chat link generator (real QR + attribution).
+- **RBAC (P1 G1.4):** Owner/Manager/Agent/Developer roles + permissions seeder; capability gates enforced on routes; capabilities shared to the UI so the settings nav hides denied items (C-17).
+- **i18n + RTL (P14):** EN/AR/ES/PT translation files, SetLocale middleware, locale switcher, `useTranslations()` hook, Arabic RTL mirroring.
+- **Real-time (P4 G4.5):** Echo client (graceful degrade), MessageCreated private-channel broadcast, inbox subscription; offline banner + online-status hook (C-16).
+- **Compliance (P15):** `COMPLIANCE.md` maps Part C (C-01…C-24) and Part D to where each is handled.
+
+Verification: Pint clean · Larastan L6 0 errors · tsc clean · **Pest 44 passing, 287 assertions** · Vite build ok.
+
+
 ## 2026-06-09 — Full feature breadth (P1, P4–P11, P14)
 
 ### What was built

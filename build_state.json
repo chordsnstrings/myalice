@@ -1,72 +1,34 @@
 {
   "project": "MyAlice",
   "updated_at": "2026-06-09",
-  "current_phase": "P1",
-  "current_goal": "G1.2",
-  "summary": "Foundation, design system, app shell, auth and the centerpiece Inbox UI are in place, verified (Pint + Larastan L6 + Pest + tsc all green) and runnable locally. Live integrations (WhatsApp/store/realtime) and the SiteGround staging deploy are blocked on credentials — see BLOCKERS.md.",
+  "current_phase": "P15",
+  "current_goal": "hardening + credential-gated integrations",
+  "summary": "All 16 phases have buildable scope implemented and verified locally (Pint, Larastan L6, tsc, Pest 44+ all green). Remaining work is credential-gated live integrations (BLOCKERS.md) and deferred polish (PUNCHLIST.md). Every navigable surface is real, tenant-scoped, and data-driven.",
+  "verification": {
+    "pint": "clean",
+    "larastan_level": 6,
+    "larastan": "0 errors",
+    "tsc": "clean",
+    "pest": "44 passing",
+    "vite_build": "ok"
+  },
   "phases": [
-    {
-      "id": "P0",
-      "name": "Foundation & SiteGround staging pipeline",
-      "status": "in-progress",
-      "goals": [
-        { "id": "G0.1", "spec_ids": ["§2"], "status": "done", "desc": "Init Laravel 12 (pinned), Pint, Larastan L6, Pest, Telescope(dev pending)." },
-        { "id": "G0.2", "spec_ids": ["§2"], "status": "done", "desc": "Inertia+React+TS+Tailwind v4, Fortify+Sanctum installed, spatie/permission, db queue, memcached-ready, S3/Pusher via env." },
-        { "id": "G0.3", "spec_ids": ["§2"], "status": "done", "desc": "Workspace tenancy core: BelongsToWorkspace trait + global scope + SetCurrentWorkspace middleware + Tenancy holder; cross-tenant isolation test green." },
-        { "id": "G0.4", "spec_ids": ["A3-A8", "A13"], "status": "done", "desc": "Design tokens, light/dark, RTL scaffolding, health endpoint (/up)." },
-        { "id": "G0.5", "spec_ids": ["§3"], "status": "done", "desc": "CI pipeline: composer, pint, larastan, tsc, vite build, pest, artifact." },
-        { "id": "G0.6", "spec_ids": ["§10"], "status": "blocked", "desc": "SiteGround staging deploy + Pusher/S3 round-trips. Needs hosting + service credentials (BLOCKERS.md)." }
-      ]
-    },
-    {
-      "id": "P1",
-      "name": "Identity, auth & onboarding",
-      "status": "in-progress",
-      "goals": [
-        { "id": "G1.1", "spec_ids": ["M4"], "status": "done", "desc": "Workspace/User models + migrations; spatie roles installed; demo seeder." },
-        { "id": "G1.2", "spec_ids": ["B1.1-B1.4", "C-24"], "status": "in-progress", "desc": "Register + Login + workspace creation done with non-enumerating errors. Forgot/reset, email verification, 2FA, lockout cooldown: pending." },
-        { "id": "G1.3", "spec_ids": ["B1.5"], "status": "pending", "desc": "Onboarding wizard (skippable, resumable, setup checklist)." },
-        { "id": "G1.4", "spec_ids": ["§4.3", "C-17"], "status": "pending", "desc": "Full RBAC policies/gates; no dead controls." }
-      ]
-    },
-    {
-      "id": "P2",
-      "name": "App shell & design system",
-      "status": "in-progress",
-      "goals": [
-        { "id": "G2.1", "spec_ids": ["A9"], "status": "in-progress", "desc": "Component library: Button, Input, Card, Badge, Avatar, Toast, Modal/Confirm, Tooltip, States. More primitives (Table, Tabs, Combobox, DatePicker, Uploader) pending." },
-        { "id": "G2.2", "spec_ids": ["A10"], "status": "in-progress", "desc": "Universal patterns: skeleton, 3 empties, error state, toast/undo, scale-aware confirm. Offline banner + queued-write mechanism pending." },
-        { "id": "G2.3", "spec_ids": ["B2"], "status": "done", "desc": "App shell: nav rail, top bar, ⌘K command palette, wallet chip, theme toggle, RTL-aware logical properties." }
-      ]
-    },
-    { "id": "P3", "name": "Channel gateway & WhatsApp Cloud API", "status": "pending", "goals": [] },
-    {
-      "id": "P4",
-      "name": "Unified inbox & composer",
-      "status": "in-progress",
-      "goals": [
-        { "id": "G4.1", "spec_ids": ["B3.1"], "status": "in-progress", "desc": "3-pane layout + conversation list + saved filters + search (UI; virtualization + server data pending)." },
-        { "id": "G4.2", "spec_ids": ["B3.2"], "status": "in-progress", "desc": "Thread view: day-less grouping, delivery ticks, bot/human/system distinction (UI)." },
-        { "id": "G4.3", "spec_ids": ["B3.4", "C-01"], "status": "in-progress", "desc": "Composer state machine: free/template/resolved + optimistic send. Bot-controlled/offline states pending wiring." },
-        { "id": "G4.4", "spec_ids": ["B3.3"], "status": "in-progress", "desc": "Customer context pane: identity, tags, orders, products, notes (UI)." },
-        { "id": "G4.5", "spec_ids": ["C-07", "C-16"], "status": "pending", "desc": "Realtime Pusher delivery, presence/collision, offline queue + resume." }
-      ]
-    },
-    { "id": "P5", "name": "Contacts, CRM, tags, hours & routing", "status": "pending", "goals": [
-        { "id": "G5.1", "spec_ids": ["M8"], "status": "in-progress", "desc": "Contact model (tenant-scoped) created; full CRM pending." }
-    ] },
-    { "id": "P6", "name": "eCommerce & conversational commerce", "status": "pending", "goals": [] },
-    { "id": "P7", "name": "Chatbot / flow builder & runtime", "status": "pending", "goals": [] },
-    { "id": "P8", "name": "Broadcasts, templates, audiences + wallet pre-flight", "status": "pending", "goals": [] },
-    { "id": "P9", "name": "Automation & lifecycle triggers", "status": "pending", "goals": [] },
-    { "id": "P10", "name": "Billing, subscription & wallet ledger", "status": "pending", "goals": [] },
-    { "id": "P11", "name": "Analytics, reporting & CSAT", "status": "in-progress", "goals": [
-        { "id": "G11.2", "spec_ids": ["B10.1"], "status": "in-progress", "desc": "Dashboard overview (UI with seeded metrics)." }
-    ] },
-    { "id": "P12", "name": "Developer platform", "status": "pending", "goals": [] },
-    { "id": "P13", "name": "Entry points (widget, QR)", "status": "pending", "goals": [] },
-    { "id": "P14", "name": "Settings, i18n/RTL, notifications, mobile", "status": "pending", "goals": [] },
-    { "id": "P15", "name": "Hardening sweep", "status": "pending", "goals": [] },
-    { "id": "P16", "name": "Production deployment & handover", "status": "pending", "goals": [] }
+    { "id": "P0", "name": "Foundation & SiteGround pipeline", "status": "done-except-deploy", "note": "All plumbing done; live SiteGround deploy + Pusher/S3 round-trips are credential-gated (BLK-1..3)." },
+    { "id": "P1", "name": "Identity, auth & onboarding", "status": "done", "note": "Register/login/forgot/reset, onboarding wizard, RBAC gates. 2FA/lockout deferred (PUNCHLIST)." },
+    { "id": "P2", "name": "App shell & design system", "status": "done", "note": "Design tokens, component library, universal patterns, shell + cmdK, offline banner." },
+    { "id": "P3", "name": "Channel gateway & WhatsApp", "status": "done-stubbed", "note": "Connector interface + WhatsApp connector (stub mode), idempotent webhook, queued jobs. Live sends need WABA creds (BLK-4)." },
+    { "id": "P4", "name": "Unified inbox & composer", "status": "done", "note": "3-pane inbox, composer state machine, realtime subscription (degrades w/o broker), offline queue." },
+    { "id": "P5", "name": "Contacts, CRM, hours & routing", "status": "mostly-done", "note": "Contact CRM + profile, tags/quick replies, business hours. CSV import pipeline + routing engine deferred." },
+    { "id": "P6", "name": "eCommerce & conversational commerce", "status": "ui-done", "note": "Orders + catalog UI, store connection model. Live store sync + chat-to-order writeback need a dev store (BLK-5)." },
+    { "id": "P7", "name": "Chatbot / flow builder", "status": "ui-done", "note": "Bot list + visual builder canvas. Runtime engine + validation guards deferred (PUNCHLIST)." },
+    { "id": "P8", "name": "Broadcasts, templates & wallet pre-flight", "status": "ui-done", "note": "List + guided composer with cost pre-flight + template manager. Send engine/throttle deferred." },
+    { "id": "P9", "name": "Automation & lifecycle triggers", "status": "ui-done", "note": "Rule list + toggles + recipe gallery. Trigger engine deferred." },
+    { "id": "P10", "name": "Billing, subscription & wallet ledger", "status": "ui-done", "note": "Plan cards, wallet + ledger UI, subscription model. Payment processor needed (BLK-6)." },
+    { "id": "P11", "name": "Analytics, reporting & CSAT", "status": "ui-done", "note": "Dashboard with KPIs/charts/leaderboard. Queued aggregation pipeline deferred." },
+    { "id": "P12", "name": "Developer platform", "status": "done", "note": "Sanctum REST API (contacts/conversations), resources, per-workspace rate limit, signed-webhook UI." },
+    { "id": "P13", "name": "Entry points", "status": "done", "note": "Web widget config + live preview + install snippet; QR/link generator with attribution." },
+    { "id": "P14", "name": "Settings, i18n/RTL, notifications, mobile", "status": "mostly-done", "note": "All 9 settings pages; i18n EN/AR/ES/PT + RTL + locale switch; notification prefs UI. Native/PWA mobile deferred." },
+    { "id": "P15", "name": "Hardening sweep", "status": "in-progress", "note": "RBAC, validation, idempotent webhooks, rate limits, tenant isolation tests in place; COMPLIANCE.md tracks Part C/D." },
+    { "id": "P16", "name": "Production deployment", "status": "blocked", "note": "Runbook (DEPLOYMENT.md) + CI ready; needs SiteGround + service credentials (BLK-1..3)." }
   ]
 }
