@@ -226,4 +226,87 @@
     .pulse-once {
         animation: value-pulse 0.6s ease-out;
     }
+
+    /* ---- Micro-interactions & motion toolkit ---- */
+
+    /* Tactile press for buttons/rows/tappables. */
+    .press {
+        transition: transform 0.12s var(--ease-out);
+    }
+    .press:active {
+        transform: scale(0.97);
+    }
+
+    /* Bottom sheets / drawers sliding up. */
+    @keyframes slide-up {
+        from {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .animate-slide-up {
+        animation: slide-up 0.24s var(--ease-out);
+    }
+
+    /* Popovers / menus scaling in from their trigger. */
+    @keyframes pop-in {
+        from {
+            opacity: 0;
+            transform: scale(0.96) translateY(-2px);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+    .animate-pop {
+        animation: pop-in 0.16s var(--ease-out);
+        transform-origin: var(--pop-origin, top);
+    }
+
+    /* Staggered list entrance — set --i on each child. */
+    @keyframes stagger-in {
+        from {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .stagger > * {
+        animation: stagger-in 0.32s var(--ease-out) both;
+        animation-delay: calc(var(--i, 0) * 28ms);
+    }
+
+    /* Message bubble pop. */
+    @keyframes bubble-in {
+        from {
+            opacity: 0;
+            transform: translateY(6px) scale(0.98);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+    .animate-bubble {
+        animation: bubble-in 0.22s var(--ease-out);
+    }
+
+    /* Safe-area helpers for the PWA / notched devices. */
+    .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    .pt-safe {
+        padding-top: env(safe-area-inset-top);
+    }
+    .h-bottomnav {
+        height: calc(56px + env(safe-area-inset-bottom));
+    }
 }

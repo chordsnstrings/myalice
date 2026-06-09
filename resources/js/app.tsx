@@ -1,6 +1,7 @@
 import './bootstrap';
 import './echo';
 import { createInertiaApp, type ResolvedComponent } from '@inertiajs/react';
+import { registerServiceWorker } from '@/lib/pwa';
 import { createRoot } from 'react-dom/client';
 import { ToastProvider } from '@/components/ui/Toast';
 
@@ -22,3 +23,5 @@ createInertiaApp({
         showSpinner: false,
     },
 });
+
+registerServiceWorker();
