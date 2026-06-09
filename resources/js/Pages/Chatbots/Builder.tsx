@@ -65,7 +65,15 @@ export default function Builder({ bot }: { bot: { id: number; name: string; stat
                     <Button variant="secondary" size="sm" onClick={() => toast('Opening test simulator…', { tone: 'info' })}>
                         <Play className="size-3.5" /> Test
                     </Button>
-                    <Button size="sm" onClick={() => toast('Published — changes are live', { tone: 'success' })}>
+                    <Button
+                        size="sm"
+                        onClick={() =>
+                            router.post(`/chatbots/${bot.id}/publish`, {}, {
+                                onSuccess: () => toast('Published — changes are live', { tone: 'success' }),
+                                onError: (e) => toast(e.flow ?? 'Fix flow errors before publishing', { tone: 'error' }),
+                            })
+                        }
+                    >
                         <Check className="size-3.5" /> Publish
                     </Button>
                 </div>

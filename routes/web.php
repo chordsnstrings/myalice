@@ -54,6 +54,7 @@ Route::middleware(['auth', 'workspace'])->group(function () {
     // Chatbots
     Route::get('/chatbots', [ChatbotController::class, 'index'])->name('chatbots');
     Route::get('/chatbots/{chatbot}/edit', [ChatbotController::class, 'edit'])->name('chatbots.edit');
+    Route::post('/chatbots/{chatbot}/publish', [ChatbotController::class, 'publish'])->name('chatbots.publish');
 
     // Broadcasts & templates
     Route::get('/broadcasts', [BroadcastController::class, 'index'])->name('broadcasts');

@@ -146,8 +146,14 @@ class DatabaseSeeder extends Seeder
         Broadcast::create(['name' => 'Eid Sale Blast', 'message_template_id' => $tpl?->id, 'status' => 'scheduled', 'schedule_at' => now()->addDay(), 'credit_cost' => 152.40, 'recipients' => 12210]);
         Broadcast::create(['name' => 'New Arrivals', 'status' => 'sent', 'credit_cost' => 88.10, 'recipients' => 8800, 'delivered' => 8740, 'read' => 6120, 'replied' => 410]);
 
-        Chatbot::create(['name' => 'FAQ Assistant', 'status' => 'live', 'graph' => ['nodes' => [], 'edges' => []]]);
-        Chatbot::create(['name' => 'Lead Capture', 'status' => 'draft', 'graph' => ['nodes' => [], 'edges' => []]]);
+        $validGraph = ['nodes' => [
+            ['id' => 'start', 'type' => 'start', 'next' => 'welcome'],
+            ['id' => 'welcome', 'type' => 'message', 'next' => 'ask'],
+            ['id' => 'ask', 'type' => 'buttons', 'fallback' => 'handoff', 'next' => 'handoff'],
+            ['id' => 'handoff', 'type' => 'handoff'],
+        ]];
+        Chatbot::create(['name' => 'FAQ Assistant', 'status' => 'live', 'graph' => $validGraph]);
+        Chatbot::create(['name' => 'Lead Capture', 'status' => 'draft', 'graph' => $validGraph]);
 
         AutomationRule::create(['name' => 'Abandoned cart — 1h', 'trigger_type' => 'abandoned_cart', 'status' => 'active', 'sent' => 1204, 'recovered_revenue' => 9120]);
         AutomationRule::create(['name' => 'Order confirmation', 'trigger_type' => 'order_confirmation', 'status' => 'active', 'sent' => 980]);
