@@ -1,5 +1,14 @@
 # Build Progress Log
 
+## 2026-06-09 — Backend engines (money + automation + import)
+
+- **Wallet + broadcast engine (P8):** `WalletService` (atomic debit/credit, no-negative, audit ledger); `SendBroadcast` debits up front and pauses on mid-send drain (C-03); server-side wallet gate on broadcast create.
+- **CSV import (P5):** `ImportContacts` action — validate, dedupe-on-phone (merge), invalid flagging, summary; upload endpoint + wired Import button.
+- **Automation dispatcher (P9):** guards for active/quiet-hours(cross-midnight)/frequency-cap(C-22)/wallet; wallet-empty = explicit skip+log+notify; `automation_sends` for capping.
+
+Verification: Pint clean · Larastan L6 0 errors · tsc clean · **Pest 54 passing, 318 assertions** · build ok.
+
+
 ## 2026-06-09 — Breadth to all phases (P3, P12, P13, P14, RBAC, realtime, hardening)
 
 - **Channels (P3):** ChannelConnector interface + WhatsApp connector (Graph API, stub mode), idempotent webhook (verify + dedupe + enqueue), queued inbound/outbound jobs.
