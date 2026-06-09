@@ -1,12 +1,23 @@
-# Punchlist — non-blocking improvements, deferred to a named phase
+# Punchlist — non-blocking items deferred to a named phase
+
+Items here are buildable without external credentials but were scoped out of the
+current pass. Credential-gated work lives in `BLOCKERS.md`.
 
 | Severity | Item | Owning phase |
 |----------|------|--------------|
-| low | Code-split the main Vite bundle (currently ~1MB; React+Inertia in one chunk) | P15 |
-| med | Migrate custom auth onto Fortify pipeline (2FA, password reset, lockout cooldown) | P1 |
-| med | Add component primitives still missing from A9 (Table, Tabs, Combobox, Date/time picker, Uploader, Emoji picker) | P2 |
-| med | Offline banner + queued-write mechanism (A10.6) and presence/collision (A10.7) | P4 |
-| low | Virtualize the conversation/contacts lists at scale (C-23) | P4/P5 |
-| low | Wire Telescope (dev) and an in-app queue/failed-job monitor | P0/P15 |
-| med | Externalize all UI strings for i18n (EN/AR/PT/ES) and full RTL parity sweep (C-21) | P14 |
-| low | Replace seeded controller data in Inbox/Dashboard with live tenant-scoped queries | P4/P11 |
+| med | Chatbot **runtime execution engine** (walk the graph at message time; max-step guard). Validation + publish gate are done. | P7 |
+| med | Migrate custom auth onto Fortify pipeline: **2FA**, lockout cooldown. Password reset is done. | P1 |
+| med | **Ticket auto-routing** engine (round-robin / load-balanced) + bot↔human handoff state. | P5 |
+| med | **Queued analytics aggregation** (replace seeded dashboard metrics with rollups). | P11 |
+| low | **List virtualization** at extreme scale (100k+/500k+) — server pagination already in place. | P15 |
+| low | Code-split the Vite bundle (currently ~1MB single chunk). | P15 |
+| low | Identity **merge/unmerge** UI across channels (C-04). | P5 |
+| low | Live **presence/collision** indicators in the inbox (C-07). | P4 |
+| low | Full UI string externalization (mechanism + nav/shell done; pages pending). | P14 |
+| low | Native mobile app or PWA delivering inbox parity (B13). | P14 |
+| low | In-app queue/failed-job monitor (Filament or custom) + Telescope wiring. | P15 |
+
+## Done since first pass (moved off the punchlist)
+CSV import · offline banner + queued writes · scale-aware bulk confirm · broadcast
+send engine + wallet ledger · automation dispatcher · flow validation + publish gate ·
+RBAC gates · i18n + RTL + locale switch · realtime scaffolding.
