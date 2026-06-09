@@ -6,8 +6,8 @@ current pass. Credential-gated work lives in `BLOCKERS.md`.
 | Severity | Item | Owning phase |
 |----------|------|--------------|
 | med | Migrate custom auth onto Fortify pipeline: **2FA**, lockout cooldown. Password reset is done. | P1 |
-| med | **Ticket auto-routing** engine (round-robin / load-balanced) + bot↔human handoff state. | P5 |
 | med | **Queued analytics aggregation** (replace seeded dashboard metrics with rollups). | P11 |
+| low | Skills-based routing + bot↔human handoff state (load-balanced auto-routing done). | P5 |
 | low | **List virtualization** at extreme scale (100k+/500k+) — server pagination already in place. | P15 |
 | low | Code-split the Vite bundle (currently ~1MB single chunk). | P15 |
 | low | Identity **merge/unmerge** UI across channels (C-04). | P5 |
