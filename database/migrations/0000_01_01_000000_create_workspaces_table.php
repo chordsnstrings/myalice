@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('workspaces', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('plan')->default('premium');
+            $table->string('locale', 8)->default('en');
+            $table->string('timezone')->default('UTC');
+            $table->string('currency', 3)->default('USD');
+            $table->decimal('wallet_balance', 12, 2)->default(0);
+            $table->string('billing_status')->default('trialing');
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('workspaces');
+    }
+};

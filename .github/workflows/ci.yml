@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, intl, bcmath
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Copy environment
+        run: cp .env.example .env && php artisan key:generate
+
+      - name: Lint (Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Static analysis (Larastan)
+        run: ./vendor/bin/phpstan analyse --no-progress
+
+      - name: Type-check (tsc)
+        run: npx tsc --noEmit
+
+      - name: Build assets (never built on SiteGround — §3)
+        run: npm run build
+
+      - name: Run tests (Pest)
+        run: ./vendor/bin/pest
+
+      # On a deploy branch this artifact (incl. public/build) ships to SiteGround
+      # via SSH/rsync; the server only runs composer install + migrate + cache.
+      - name: Upload build artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-build
+          path: |
+            public/build
+          retention-days: 7

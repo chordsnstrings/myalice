@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $plan
+ * @property string $locale
+ * @property string $timezone
+ * @property string $currency
+ * @property numeric-string $wallet_balance
+ * @property string $billing_status
+ */
+class Workspace extends Model
+{
+    /** @var list<string> */
+    protected $fillable = [
+        'name',
+        'plan',
+        'locale',
+        'timezone',
+        'currency',
+        'wallet_balance',
+        'billing_status',
+    ];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return [
+            'wallet_balance' => 'decimal:2',
+        ];
+    }
+
+    /** @return HasMany<User, $this> */
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+}
