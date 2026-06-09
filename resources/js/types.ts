@@ -27,6 +27,7 @@ export interface PageProps {
     auth: { user: SharedAuthUser | null; workspace: SharedWorkspace | null; can: Capabilities };
     flash: { success?: string; error?: string };
     locale: string;
+    translations?: Record<string, string>;
     [key: string]: unknown;
 }
 

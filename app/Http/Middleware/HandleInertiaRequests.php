@@ -51,6 +51,26 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
             'locale' => app()->getLocale(),
+            'translations' => $this->translations(),
         ];
+    }
+
+    /**
+     * Flat key→string map for the active locale (lang/<locale>.json).
+     *
+     * @return array<string, string>
+     */
+    protected function translations(): array
+    {
+        $path = lang_path(app()->getLocale().'.json');
+
+        if (! is_file($path)) {
+            return [];
+        }
+
+        /** @var array<string, string> $decoded */
+        $decoded = json_decode((string) file_get_contents($path), true) ?: [];
+
+        return $decoded;
     }
 }

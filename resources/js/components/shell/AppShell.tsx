@@ -20,13 +20,14 @@ import {
 } from 'lucide-react';
 import { cn, money } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
+import { useTranslations } from '@/hooks/useTranslations';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Avatar } from '@/components/ui/Avatar';
 import { CommandPalette } from './CommandPalette';
 import type { PageProps } from '@/types';
 
 interface NavItem {
-    label: string;
+    key: string;
     href: string;
     icon: React.ComponentType<{ className?: string }>;
     badge?: number;
@@ -34,18 +35,26 @@ interface NavItem {
 }
 
 const nav: NavItem[] = [
-    { label: 'Inbox', href: '/inbox', icon: Inbox, badge: 7 },
-    { label: 'Contacts', href: '/contacts', icon: Users },
-    { label: 'Chatbots', href: '/chatbots', icon: Bot },
-    { label: 'Broadcasts', href: '/broadcasts', icon: Megaphone },
-    { label: 'Automations', href: '/automations', icon: Workflow, locked: true },
-    { label: 'Commerce', href: '/orders', icon: ShoppingBag },
-    { label: 'Analytics', href: '/dashboard', icon: BarChart3 },
+    { key: 'nav.inbox', href: '/inbox', icon: Inbox, badge: 7 },
+    { key: 'nav.contacts', href: '/contacts', icon: Users },
+    { key: 'nav.chatbots', href: '/chatbots', icon: Bot },
+    { key: 'nav.broadcasts', href: '/broadcasts', icon: Megaphone },
+    { key: 'nav.automations', href: '/automations', icon: Workflow, locked: true },
+    { key: 'nav.commerce', href: '/orders', icon: ShoppingBag },
+    { key: 'nav.analytics', href: '/dashboard', icon: BarChart3 },
+];
+
+const languages = [
+    { code: 'en', label: 'English' },
+    { code: 'ar', label: 'العربية' },
+    { code: 'es', label: 'Español' },
+    { code: 'pt', label: 'Português' },
 ];
 
 export function AppShell({ title, children }: { title?: string; children: ReactNode }) {
     const { props, url } = usePage<PageProps>();
     const { theme, toggle } = useTheme();
+    const { t, locale } = useTranslations();
     const [menuOpen, setMenuOpen] = useState(false);
     const workspace = props.auth.workspace;
     const user = props.auth.user;
@@ -85,7 +94,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                                     <span className="absolute -start-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-e-full bg-accent" />
                                 )}
                                 <Icon className="size-[18px] shrink-0" />
-                                <span className="flex-1">{item.label}</span>
+                                <span className="flex-1">{t(item.key)}</span>
                                 {item.locked ? (
                                     <Lock className="size-3.5 text-tertiary" />
                                 ) : item.badge ? (
@@ -109,7 +118,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                         )}
                     >
                         <Settings className="size-[18px]" />
-                        Settings
+                        {t('nav.settings')}
                     </Link>
                 </div>
             </aside>
@@ -130,7 +139,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                         className="ms-auto flex h-8 w-64 items-center gap-2 rounded-[var(--radius-control)] border border-default bg-canvas px-3 text-[13px] text-tertiary transition-colors hover:border-strong"
                     >
                         <Search className="size-4" />
-                        <span className="flex-1 text-start">Search…</span>
+                        <span className="flex-1 text-start">{t('common.search')}</span>
                         <kbd className="rounded border border-default px-1 text-[11px]">⌘K</kbd>
                     </button>
 
@@ -185,6 +194,31 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                                     <Link href="/settings/profile" className="block rounded-md px-3 py-1.5 text-[13px] text-secondary hover:bg-surface-hover hover:text-primary">
                                         Profile & preferences
                                     </Link>
+                                    <div className="my-1 h-px bg-default" />
+                                    <p className="px-3 pb-1 pt-1 text-[11px] font-medium uppercase tracking-wide text-tertiary">
+                                        {t('common.language')}
+                                    </p>
+                                    <div className="flex flex-wrap gap-1 px-2 pb-1.5">
+                                        {languages.map((l) => (
+                                            <button
+                                                key={l.code}
+                                                onClick={() =>
+                                                    router.post(
+                                                        '/locale',
+                                                        { locale: l.code },
+                                                        { onSuccess: () => window.location.reload() },
+                                                    )
+                                                }
+                                                className={cn(
+                                                    'rounded-md px-2 py-1 text-[12px] font-medium',
+                                                    locale === l.code ? 'bg-accent-subtle text-accent' : 'text-secondary hover:bg-surface-hover',
+                                                )}
+                                            >
+                                                {l.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="my-1 h-px bg-default" />
                                     <button
                                         onClick={() => router.post('/logout')}
                                         className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-start text-[13px] text-secondary hover:bg-surface-hover hover:text-primary"

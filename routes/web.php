@@ -10,6 +10,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InboxController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TemplateController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -27,6 +28,14 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::get('/', fn () => redirect(auth()->check() ? '/inbox' : '/login'));
+
+// Locale switch (A13) — stored in the session, applied by SetLocale middleware.
+Route::post('/locale', function (Request $request) {
+    $request->validate(['locale' => ['required', 'in:en,ar,es,pt']]);
+    $request->session()->put('locale', $request->string('locale')->toString());
+
+    return back();
+})->name('locale');
 
 // Authenticated workspace
 Route::middleware(['auth', 'workspace'])->group(function () {
