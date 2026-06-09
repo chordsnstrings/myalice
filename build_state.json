@@ -28,7 +28,7 @@
     { "id": "P12", "name": "Developer platform", "status": "done", "note": "Sanctum REST API (contacts/conversations), resources, per-workspace rate limit, signed-webhook UI." },
     { "id": "P13", "name": "Entry points", "status": "done", "note": "Web widget config + live preview + install snippet; QR/link generator with attribution." },
     { "id": "P14", "name": "Settings, i18n/RTL, notifications, mobile", "status": "mostly-done", "note": "All 9 settings pages; i18n EN/AR/ES/PT + RTL + locale switch; notification prefs UI. Native/PWA mobile deferred." },
-    { "id": "P15", "name": "Hardening sweep", "status": "in-progress", "note": "RBAC, validation, idempotent webhooks, rate limits, tenant isolation tests in place; COMPLIANCE.md tracks Part C/D." },
+    { "id": "P15", "name": "Hardening sweep", "status": "done", "note": "Production audit complete (AUDIT.md): auth rate limiting, trusted proxies + force-HTTPS, security headers, N+1 fix, encrypted credentials verified, prod-cache boot verified. All High findings closed. COMPLIANCE.md tracks Part C/D." },
     { "id": "P16", "name": "Production deployment", "status": "blocked", "note": "Runbook (DEPLOYMENT.md) + CI ready; needs SiteGround + service credentials (BLK-1..3)." }
   ]
 }

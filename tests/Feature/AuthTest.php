@@ -45,3 +45,14 @@ it('rejects bad credentials with a non-enumerating error (C-24)', function () {
 it('redirects guests away from the inbox', function () {
     $this->get('/inbox')->assertRedirect('/login');
 });
+
+it('throttles repeated failed logins (C-24 brute-force protection)', function () {
+    $payload = ['email' => 'victim@a.test', 'password' => 'wrong'];
+
+    for ($i = 0; $i < 5; $i++) {
+        $this->post('/login', $payload);
+    }
+
+    // The 6th attempt within the window is rate-limited.
+    $this->post('/login', $payload)->assertStatus(429);
+});

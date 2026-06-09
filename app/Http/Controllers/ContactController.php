@@ -15,6 +15,13 @@ class ContactController extends Controller
     /** Contacts list (B4.1). */
     public function index(): Response
     {
+        // Order counts in one grouped query (avoids an N+1 over the list).
+        $orderCounts = Order::query()
+            ->selectRaw('contact_id, count(*) as c')
+            ->whereNotNull('contact_id')
+            ->groupBy('contact_id')
+            ->pluck('c', 'contact_id');
+
         $contacts = Contact::orderBy('name')
             ->get()
             ->map(fn (Contact $c) => [
@@ -25,7 +32,7 @@ class ContactController extends Controller
                 'channel' => $c->channel,
                 'lifecycle' => $c->lifecycle_stage,
                 'tags' => $c->tags ?? [],
-                'orders' => Order::where('contact_id', $c->id)->count(),
+                'orders' => (int) ($orderCounts[$c->id] ?? 0),
             ])->values();
 
         return Inertia::render('Contacts/Index', ['contacts' => $contacts]);
