@@ -67,4 +67,6 @@ Route::middleware(['auth', 'workspace'])->group(function () {
     Route::get('/settings/wallet', [SettingsController::class, 'wallet'])->name('settings.wallet');
     Route::get('/settings/developer', [SettingsController::class, 'developer'])->name('settings.developer');
     Route::get('/settings/profile', [SettingsController::class, 'profile'])->name('settings.profile');
+    Route::get('/settings/widget', [SettingsController::class, 'widget'])->name('settings.widget');
+    Route::get('/settings/qr', [SettingsController::class, 'qr'])->name('settings.qr');
 });

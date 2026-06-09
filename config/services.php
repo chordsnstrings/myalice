@@ -35,4 +35,17 @@ return [
         ],
     ],
 
+    'whatsapp' => [
+        'token' => env('WHATSAPP_API_TOKEN'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'waba_id' => env('WHATSAPP_WABA_ID'),
+        'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
+        'app_secret' => env('META_APP_SECRET'),
+    ],
+
+    'shopify' => [
+        'key' => env('SHOPIFY_API_KEY'),
+        'secret' => env('SHOPIFY_API_SECRET'),
+    ],
+
 ];

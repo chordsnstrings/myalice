@@ -121,6 +121,25 @@ class SettingsController extends Controller
         return Inertia::render('Settings/Profile');
     }
 
+    /** Web chat widget config (B12.1). */
+    public function widget(): Response
+    {
+        $channel = Channel::where('type', 'whatsapp')->first();
+
+        return Inertia::render('Settings/Widget', [
+            'workspace_id' => Tenancy::currentOrFail()->id,
+            'whatsapp' => $channel?->external_id,
+        ]);
+    }
+
+    /** QR codes & link generator (B12.2). */
+    public function qr(): Response
+    {
+        return Inertia::render('Settings/Qr', [
+            'phone' => '15551234567',
+        ]);
+    }
+
     /** @return array{plan: string, billing_cycle: string, seats: int, status: string, renews_at: string|null} */
     private function subscription(): array
     {

@@ -38,6 +38,8 @@ it('renders every authenticated page', function (string $url, string $component)
     ['/settings/wallet', 'Settings/Wallet'],
     ['/settings/developer', 'Settings/Developer'],
     ['/settings/profile', 'Settings/Profile'],
+    ['/settings/widget', 'Settings/Widget'],
+    ['/settings/qr', 'Settings/Qr'],
     ['/onboarding', 'Onboarding/Wizard'],
 ]);
 

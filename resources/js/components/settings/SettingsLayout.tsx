@@ -9,6 +9,8 @@ const nav = [
     { label: 'Channels', href: '/settings/channels' },
     { label: 'Business hours', href: '/settings/hours' },
     { label: 'Quick replies & tags', href: '/settings/content' },
+    { label: 'Web widget', href: '/settings/widget' },
+    { label: 'QR & links', href: '/settings/qr' },
     { label: 'Billing', href: '/settings/billing' },
     { label: 'Wallet', href: '/settings/wallet' },
     { label: 'Developer', href: '/settings/developer' },
