@@ -72,7 +72,8 @@ export default function Sales({ sales, channels, agents, filters }: Props) {
                     <div className="border-b border-default px-5 py-3.5">
                         <h3 className="text-sm font-semibold">Revenue by agent</h3>
                     </div>
-                    <table className="w-full text-sm">
+                    <div className="overflow-x-auto">
+                    <table className="w-full min-w-[420px] text-sm">
                         <thead>
                             <tr className="text-[12px] uppercase tracking-wide text-tertiary">
                                 <th className="px-5 py-2.5 text-start font-medium">Agent</th>
@@ -90,6 +91,7 @@ export default function Sales({ sales, channels, agents, filters }: Props) {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 </Card>
             </Page>
         </AppShell>

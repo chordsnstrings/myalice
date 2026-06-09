@@ -25,8 +25,8 @@ export function Table<T extends { id: number | string }>({
     }
 
     return (
-        <div className="overflow-hidden rounded-[var(--radius-card)] border border-default bg-surface">
-            <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-[var(--radius-card)] border border-default bg-surface">
+            <table className="w-full min-w-[560px] text-sm">
                 <thead>
                     <tr className="border-b border-default">
                         {columns.map((c) => (

@@ -46,8 +46,8 @@ export default function AgentPerformance({ leaderboard, channels, agents, filter
                     <FilterBar routeUrl="/reports/agents" filters={filters} channels={channels} agents={agents} />
                 </div>
 
-                <Card className="overflow-hidden">
-                    <table className="w-full text-sm">
+                <Card className="overflow-x-auto">
+                    <table className="w-full min-w-[640px] text-sm">
                         <thead>
                             <tr className="border-b border-default text-[12px] uppercase tracking-wide text-tertiary">
                                 <th className="px-4 py-2.5 text-start font-medium">Agent</th>

@@ -112,7 +112,8 @@ export default function Dashboard({ kpis, revenueTrend, leaderboard, recovered, 
                                 Full report →
                             </Link>
                         </div>
-                        <table className="w-full text-sm">
+                        <div className="overflow-x-auto">
+                        <table className="w-full min-w-[520px] text-sm">
                             <thead>
                                 <tr className="text-[12px] uppercase tracking-wide text-tertiary">
                                     <th className="px-5 py-2.5 text-start font-medium">Agent</th>
@@ -144,6 +145,7 @@ export default function Dashboard({ kpis, revenueTrend, leaderboard, recovered, 
                                 )}
                             </tbody>
                         </table>
+                        </div>
                     </Card>
                 </div>
             </div>
