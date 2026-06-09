@@ -64,7 +64,7 @@ Route::middleware(['auth', 'workspace'])->group(function () {
     Route::get('/templates', [TemplateController::class, 'index'])->name('templates');
 
     // Automations
-    Route::get('/automations', [AutomationController::class, 'index'])->name('automations');
+    Route::get('/automations', [AutomationController::class, 'index'])->middleware('can:use-automation')->name('automations');
 
     // Commerce
     Route::get('/orders', [CommerceController::class, 'orders'])->name('orders');

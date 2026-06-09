@@ -24,7 +24,7 @@ export interface Capabilities {
 }
 
 export interface PageProps {
-    auth: { user: SharedAuthUser | null; workspace: SharedWorkspace | null; can: Capabilities };
+    auth: { user: SharedAuthUser | null; workspace: SharedWorkspace | null; can: Capabilities; features: string[] };
     flash: { success?: string; error?: string };
     locale: string;
     translations?: Record<string, string>;

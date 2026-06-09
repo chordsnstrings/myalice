@@ -23,6 +23,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useTranslations } from '@/hooks/useTranslations';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Avatar } from '@/components/ui/Avatar';
+import { useToast } from '@/components/ui/Toast';
 import { CommandPalette } from './CommandPalette';
 import { OfflineBanner } from './OfflineBanner';
 import { Brand } from '@/components/Brand';
@@ -33,7 +34,8 @@ interface NavItem {
     href: string;
     icon: React.ComponentType<{ className?: string }>;
     badge?: number;
-    locked?: boolean;
+    /** Plan feature this item requires; absent = always available. */
+    feature?: string;
 }
 
 const nav: NavItem[] = [
@@ -41,7 +43,7 @@ const nav: NavItem[] = [
     { key: 'nav.contacts', href: '/contacts', icon: Users },
     { key: 'nav.chatbots', href: '/chatbots', icon: Bot },
     { key: 'nav.broadcasts', href: '/broadcasts', icon: Megaphone },
-    { key: 'nav.automations', href: '/automations', icon: Workflow, locked: true },
+    { key: 'nav.automations', href: '/automations', icon: Workflow, feature: 'automation' },
     { key: 'nav.commerce', href: '/orders', icon: ShoppingBag },
     { key: 'nav.analytics', href: '/dashboard', icon: BarChart3 },
 ];
@@ -57,9 +59,11 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
     const { props, url } = usePage<PageProps>();
     const { theme, toggle } = useTheme();
     const { t, locale } = useTranslations();
+    const { toast } = useToast();
     const [menuOpen, setMenuOpen] = useState(false);
     const workspace = props.auth.workspace;
     const user = props.auth.user;
+    const features = props.auth.features ?? [];
     const lowWallet = (workspace?.wallet_balance ?? 0) < 25;
 
     const isActive = (href: string) => url.startsWith(href);
@@ -78,29 +82,47 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                     {nav.map((item) => {
                         const active = isActive(item.href);
                         const Icon = item.icon;
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={cn(
-                                    'group relative flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-[13px] font-medium transition-colors',
-                                    active
-                                        ? 'bg-accent-subtle text-accent'
-                                        : 'text-secondary hover:bg-surface-hover hover:text-primary',
-                                )}
-                            >
+                        const locked = !!item.feature && !features.includes(item.feature);
+                        const className = cn(
+                            'group relative flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-start text-[13px] font-medium transition-colors',
+                            active
+                                ? 'bg-accent-subtle text-accent'
+                                : 'text-secondary hover:bg-surface-hover hover:text-primary',
+                        );
+                        const inner = (
+                            <>
                                 {active && (
                                     <span className="absolute -start-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-e-full bg-accent" />
                                 )}
                                 <Icon className="size-[18px] shrink-0" />
                                 <span className="flex-1">{t(item.key)}</span>
-                                {item.locked ? (
+                                {locked ? (
                                     <Lock className="size-3.5 text-tertiary" />
                                 ) : item.badge ? (
                                     <span className="rounded-full bg-accent px-1.5 text-[11px] font-semibold text-accent-contrast">
                                         {item.badge}
                                     </span>
                                 ) : null}
+                            </>
+                        );
+
+                        // Locked → upgrade explainer, never a dead end (B2 / C-17).
+                        return locked ? (
+                            <button
+                                key={item.href}
+                                className={className}
+                                onClick={() => {
+                                    toast('Automations is on the Business plan. Upgrade to enable it.', {
+                                        tone: 'info',
+                                        action: { label: 'Upgrade', onClick: () => router.visit('/settings/billing') },
+                                    });
+                                }}
+                            >
+                                {inner}
+                            </button>
+                        ) : (
+                            <Link key={item.href} href={item.href} className={className}>
+                                {inner}
                             </Link>
                         );
                     })}

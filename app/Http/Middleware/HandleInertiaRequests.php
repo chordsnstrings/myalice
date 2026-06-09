@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\Plans;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -45,6 +46,7 @@ class HandleInertiaRequests extends Middleware
                     'manage_channels' => $user->can('manage-channels'),
                     'manage_api' => $user->can('manage-api'),
                 ] : [],
+                'features' => $workspace ? Plans::features($workspace->plan) : [],
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

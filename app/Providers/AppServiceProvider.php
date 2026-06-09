@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Channels\ChannelManager;
 use App\Models\User;
+use App\Support\Plans;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -33,5 +34,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-channels', fn (User $u) => in_array($u->workspace_role, ['owner', 'manager'], true));
         Gate::define('manage-bots', fn (User $u) => in_array($u->workspace_role, ['owner', 'manager'], true));
         Gate::define('manage-api', fn (User $u) => in_array($u->workspace_role, ['owner', 'developer'], true));
+
+        // Plan-based feature gate (§10). Used by the nav lock and feature routes.
+        Gate::define('use-automation', fn (User $u) => Plans::includes(optional($u->currentWorkspace)->plan ?? 'premium', 'automation'));
     }
 }

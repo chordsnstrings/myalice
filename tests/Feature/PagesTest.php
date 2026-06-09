@@ -4,7 +4,7 @@ use App\Models\User;
 use App\Models\Workspace;
 
 beforeEach(function () {
-    $ws = Workspace::create(['name' => 'Test WS', 'wallet_balance' => 128.50, 'currency' => 'USD']);
+    $ws = Workspace::create(['name' => 'Test WS', 'plan' => 'business', 'wallet_balance' => 128.50, 'currency' => 'USD']);
     $this->user = User::create([
         'workspace_id' => $ws->id,
         'name' => 'Tester',
