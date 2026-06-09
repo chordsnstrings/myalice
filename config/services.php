@@ -43,6 +43,18 @@ return [
         'app_secret' => env('META_APP_SECRET'),
     ],
 
+    'messenger' => [
+        'page_token' => env('MESSENGER_PAGE_TOKEN'),
+        'verify_token' => env('MESSENGER_VERIFY_TOKEN'),
+        'app_secret' => env('META_APP_SECRET'),
+    ],
+
+    'instagram' => [
+        'page_token' => env('INSTAGRAM_PAGE_TOKEN'),
+        'verify_token' => env('INSTAGRAM_VERIFY_TOKEN'),
+        'app_secret' => env('META_APP_SECRET'),
+    ],
+
     'shopify' => [
         'key' => env('SHOPIFY_API_KEY'),
         'secret' => env('SHOPIFY_API_SECRET'),

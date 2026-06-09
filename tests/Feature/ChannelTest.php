@@ -51,6 +51,17 @@ it('ingests an inbound WhatsApp message into a normalized conversation', functio
     expect(Message::withoutGlobalScopes()->where('workspace_id', $ws->id)->where('body', 'Hello there')->exists())->toBeTrue();
 });
 
+it('rejects a WhatsApp payload with a bad signature when the app secret is set', function () {
+    config()->set('services.whatsapp.app_secret', 'wa-secret');
+    $ws = Workspace::create(['name' => 'WA Sig WS']);
+    Channel::create(['workspace_id' => $ws->id, 'type' => 'whatsapp', 'name' => 'WA', 'external_id' => 'PHONE-SIG']);
+
+    $this->postJson('/api/webhooks/whatsapp', waPayload('wamid.sig', 'PHONE-SIG'), ['X-Hub-Signature-256' => 'sha256=nope'])
+        ->assertForbidden();
+
+    expect(Message::withoutGlobalScopes()->count())->toBe(0);
+});
+
 it('is idempotent against provider retries (M1-FR-06)', function () {
     $ws = Workspace::create(['name' => 'Idem WS']);
     Channel::create(['workspace_id' => $ws->id, 'type' => 'whatsapp', 'name' => 'WA', 'external_id' => 'PHONE9']);

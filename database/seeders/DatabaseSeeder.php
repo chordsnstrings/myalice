@@ -62,11 +62,11 @@ class DatabaseSeeder extends Seeder
         }
 
         Channel::insert(array_map(fn ($c) => array_merge($c, ['workspace_id' => $workspace->id, 'created_at' => now(), 'updated_at' => now()]), [
-            ['type' => 'whatsapp', 'name' => 'Acme WhatsApp', 'status' => 'connected'],
-            ['type' => 'instagram', 'name' => '@acme', 'status' => 'connected'],
-            ['type' => 'messenger', 'name' => 'Acme Page', 'status' => 'connected'],
-            ['type' => 'web', 'name' => 'Storefront widget', 'status' => 'connected'],
-            ['type' => 'telegram', 'name' => 'Acme Bot', 'status' => 'action_needed'],
+            ['type' => 'whatsapp', 'name' => 'Acme WhatsApp', 'external_id' => '100000000000001', 'status' => 'connected'],
+            ['type' => 'instagram', 'name' => '@acme', 'external_id' => '200000000000002', 'status' => 'connected'],
+            ['type' => 'messenger', 'name' => 'Acme Page', 'external_id' => '300000000000003', 'status' => 'connected'],
+            ['type' => 'web', 'name' => 'Storefront widget', 'external_id' => null, 'status' => 'connected'],
+            ['type' => 'telegram', 'name' => 'Acme Bot', 'external_id' => null, 'status' => 'action_needed'],
         ]));
 
         foreach (['VIP' => 'info', 'Returning' => 'neutral', 'Lead' => 'accent', 'Wholesale' => 'warning'] as $name => $color) {

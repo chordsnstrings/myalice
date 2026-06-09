@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\ContactApiController;
 use App\Http\Controllers\Api\ConversationApiController;
+use App\Http\Controllers\Webhooks\InstagramWebhookController;
+use App\Http\Controllers\Webhooks\MessengerWebhookController;
 use App\Http\Controllers\Webhooks\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -11,6 +13,12 @@ use Illuminate\Support\Facades\Route;
 */
 Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify']);
 Route::post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'handle']);
+
+Route::get('/webhooks/messenger', [MessengerWebhookController::class, 'verify']);
+Route::post('/webhooks/messenger', [MessengerWebhookController::class, 'handle']);
+
+Route::get('/webhooks/instagram', [InstagramWebhookController::class, 'verify']);
+Route::post('/webhooks/instagram', [InstagramWebhookController::class, 'handle']);
 
 /*
 | Developer REST API (M19 / B11.7). Sanctum token auth, scoped to the token's

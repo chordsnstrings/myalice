@@ -13,6 +13,8 @@ class ChannelManager
     /** @var array<string, class-string<ChannelConnector>> */
     protected array $connectors = [
         'whatsapp' => WhatsAppConnector::class,
+        'messenger' => MessengerConnector::class,
+        'instagram' => InstagramConnector::class,
     ];
 
     public function for(string $type): ChannelConnector
