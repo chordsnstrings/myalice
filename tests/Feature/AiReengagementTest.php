@@ -92,6 +92,18 @@ it('skips when re-engagement is disabled', function () {
     Queue::assertNothingPushed();
 });
 
+it('does not spend the marker when no provider is connected', function () {
+    Queue::fake();
+    AiProvider::query()->delete(); // model enabled, but nothing to reply with
+    $c = stalled($this->contact->id);
+
+    $this->artisan('ai:reengage')->assertSuccessful();
+
+    Tenancy::set($this->ws);
+    Queue::assertNothingPushed();
+    expect($c->fresh()->reengaged_at)->toBeNull();
+});
+
 it('skips chats a human already replied to, or that were already re-engaged', function () {
     Queue::fake();
     $human = stalled($this->contact->id);

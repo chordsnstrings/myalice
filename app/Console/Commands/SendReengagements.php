@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Jobs\SendAiReengagement;
 use App\Models\AiAction;
 use App\Models\AiAgent;
+use App\Models\AiProvider;
 use App\Models\Conversation;
 use App\Models\Workspace;
 use App\Support\Plans;
@@ -32,7 +33,10 @@ class SendReengagements extends Command
 
         foreach (Workspace::all() as $workspace) {
             Tenancy::set($workspace);
-            if (Plans::includes($workspace->plan, 'ai_agents')) {
+            // Only spend the one-shot re-engagement marker when a model can actually
+            // reply — no connected provider means the run would just log errors.
+            if (Plans::includes($workspace->plan, 'ai_agents')
+                && AiProvider::where('status', 'connected')->exists()) {
                 $total += $this->scan($dry);
             }
             Tenancy::clear();
