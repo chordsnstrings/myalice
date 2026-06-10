@@ -24,8 +24,18 @@ class WhatsAppWebhookController extends MetaWebhookController
 
     protected function eventId(Request $request, array $payload): string
     {
-        return data_get($payload, 'entry.0.changes.0.value.messages.0.id')
-            ?? data_get($payload, 'entry.0.id')
-            ?? md5($request->getContent());
+        $messageId = data_get($payload, 'entry.0.changes.0.value.messages.0.id');
+        if ($messageId !== null) {
+            return (string) $messageId;
+        }
+
+        // Status receipts: key on the status id + state so each transition is
+        // deduped independently (not collapsed onto the WABA entry id).
+        $statusId = data_get($payload, 'entry.0.changes.0.value.statuses.0.id');
+        if ($statusId !== null) {
+            return 'status:'.$statusId.':'.data_get($payload, 'entry.0.changes.0.value.statuses.0.status');
+        }
+
+        return md5($request->getContent());
     }
 }

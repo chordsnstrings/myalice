@@ -77,4 +77,28 @@ class WhatsAppConnector implements ChannelConnector
 
         return $messages;
     }
+
+    public function normalizeStatuses(array $payload): array
+    {
+        $statuses = [];
+
+        foreach (data_get($payload, 'entry', []) as $entry) {
+            foreach (data_get($entry, 'changes', []) as $change) {
+                foreach (data_get($change, 'value.statuses', []) as $status) {
+                    $id = data_get($status, 'id');
+                    if ($id === null) {
+                        continue;
+                    }
+                    $statuses[] = [
+                        'external_id' => (string) $id,
+                        'status' => (string) data_get($status, 'status', 'sent'), // sent|delivered|read|failed
+                        'error_code' => data_get($status, 'errors.0.code'),
+                        'at' => now()->toIso8601String(),
+                    ];
+                }
+            }
+        }
+
+        return $statuses;
+    }
 }

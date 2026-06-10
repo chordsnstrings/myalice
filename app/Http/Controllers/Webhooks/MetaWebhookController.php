@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Webhooks;
 use App\Channels\ChannelManager;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessInboundMessage;
+use App\Jobs\ReconcileDeliveryStatus;
 use App\Models\Channel;
 use App\Models\WebhookEvent;
 use Illuminate\Http\JsonResponse;
@@ -68,8 +69,16 @@ abstract class MetaWebhookController extends Controller
         $channel = $this->resolveChannel($this->recipientId($payload));
 
         if ($channel) {
-            foreach ($channels->for($this->type())->normalizeInbound($payload) as $message) {
+            $connector = $channels->for($this->type());
+
+            foreach ($connector->normalizeInbound($payload) as $message) {
                 ProcessInboundMessage::dispatch($channel->workspace_id, $this->type(), $message);
+            }
+
+            // Delivery/read/failed receipts → reconcile message + recipient status.
+            $statuses = $connector->normalizeStatuses($payload);
+            if ($statuses !== []) {
+                ReconcileDeliveryStatus::dispatch($channel->workspace_id, $this->type(), $statuses);
             }
         } else {
             Log::warning("{$this->type()} webhook for unknown channel", ['recipient' => $this->recipientId($payload)]);

@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
  * @property string $author
  * @property string $body
  * @property string|null $status
+ * @property string|null $external_id
  * @property Carbon $sent_at
  */
 class Message extends Model
@@ -22,7 +23,7 @@ class Message extends Model
     use BelongsToWorkspace;
 
     /** @var list<string> */
-    protected $fillable = ['workspace_id', 'conversation_id', 'direction', 'author', 'body', 'status', 'sent_at'];
+    protected $fillable = ['workspace_id', 'conversation_id', 'direction', 'author', 'body', 'status', 'external_id', 'sent_at'];
 
     /** @return array<string, string> */
     protected function casts(): array

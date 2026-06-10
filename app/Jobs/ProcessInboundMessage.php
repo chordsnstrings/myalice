@@ -4,11 +4,13 @@ namespace App\Jobs;
 
 use App\Events\MessageCreated;
 use App\Models\Contact;
+use App\Models\ContactChannel;
 use App\Models\Conversation;
 use App\Models\CsatRating;
 use App\Models\Message;
 use App\Models\Workspace;
 use App\Services\RoutingService;
+use App\Support\Consent;
 use App\Support\Tenancy;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -42,10 +44,22 @@ class ProcessInboundMessage implements ShouldQueue
 
         Tenancy::set($workspace);
 
+        $from = $this->message['from'];
+
         $contact = Contact::firstOrCreate(
-            ['phone' => $this->message['from'], 'channel' => $this->channel],
-            ['name' => $this->message['from']],
+            ['phone' => $from, 'channel' => $this->channel],
+            ['name' => $from],
         );
+
+        // Per-channel identity + 24h session window (broadcast Phase 0). Inbound
+        // opens the session window but does NOT imply marketing opt-in.
+        $channelIdentity = ContactChannel::firstOrNew(['channel' => $this->channel, 'external_id' => $from]);
+        if (! $channelIdentity->exists) {
+            $channelIdentity->contact_id = $contact->id;
+        }
+        $channelIdentity->last_inbound_at = now();
+        $channelIdentity->window_expires_at = now()->addHours(24);
+        $channelIdentity->save();
 
         $conversation = Conversation::firstOrCreate(
             ['contact_id' => $contact->id, 'channel' => $this->channel],
@@ -59,11 +73,18 @@ class ProcessInboundMessage implements ShouldQueue
 
         $body = $this->message['body'];
 
+        // Honour STOP/unsubscribe immediately (compliance).
+        $optedOut = Consent::looksLikeOptOut($body);
+        if ($optedOut && $channelIdentity->opted_out_at === null) {
+            Consent::recordOptOut($channelIdentity, 'inbound_keyword', $body);
+        }
+
         $created = Message::create([
             'conversation_id' => $conversation->id,
             'direction' => 'in',
             'author' => 'customer',
             'body' => $body,
+            'external_id' => $this->message['external_id'] ?? null,
             'sent_at' => $this->message['sent_at'] ?? now(),
         ]);
 
@@ -102,9 +123,14 @@ class ProcessInboundMessage implements ShouldQueue
             'last_message_at' => now(),
         ]);
 
-        // Let the AI agent consider a reply (debounced for burst messages, M13).
-        GenerateAiReply::dispatch($this->workspaceId, $conversation->id, $created->id)
-            ->delay(now()->addSeconds(8));
+        // An opt-out takes the conversation off the AI; otherwise let the agent
+        // consider a reply (debounced for burst messages, M13).
+        if ($optedOut) {
+            $conversation->update(['ai_status' => 'suppressed']);
+        } else {
+            GenerateAiReply::dispatch($this->workspaceId, $conversation->id, $created->id)
+                ->delay(now()->addSeconds(8));
+        }
 
         Tenancy::clear();
     }

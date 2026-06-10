@@ -28,12 +28,13 @@ class SendOutboundMessage implements ShouldQueue
         }
 
         try {
-            $channels->for($this->channel)->send($this->to, [
+            $providerId = $channels->for($this->channel)->send($this->to, [
                 'type' => 'text',
                 'text' => ['body' => $message->body],
             ]);
 
-            $message->update(['status' => 'sent']);
+            // Keep the provider id so delivery/read receipts can reconcile (M2 / Phase 0).
+            $message->update(['status' => 'sent', 'external_id' => $providerId]);
         } catch (Throwable $e) {
             $message->update(['status' => 'failed']);
             throw $e;

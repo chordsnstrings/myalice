@@ -79,4 +79,26 @@ class MessengerConnector implements ChannelConnector
 
         return $messages;
     }
+
+    public function normalizeStatuses(array $payload): array
+    {
+        $statuses = [];
+
+        foreach (data_get($payload, 'entry', []) as $entry) {
+            foreach (data_get($entry, 'messaging', []) as $event) {
+                // Delivery receipts carry the delivered message ids.
+                foreach ((array) data_get($event, 'delivery.mids', []) as $mid) {
+                    $statuses[] = ['external_id' => (string) $mid, 'status' => 'delivered', 'at' => now()->toIso8601String()];
+                }
+                // Read events are watermark-based (no per-message id) — handled by
+                // the reconciler using the watermark when present.
+                $watermark = data_get($event, 'read.watermark');
+                if ($watermark !== null) {
+                    $statuses[] = ['external_id' => '', 'status' => 'read', 'at' => (string) $watermark];
+                }
+            }
+        }
+
+        return $statuses;
+    }
 }

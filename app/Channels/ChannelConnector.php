@@ -30,4 +30,12 @@ interface ChannelConnector
      * @return array<int, array<string, mixed>> zero or more normalized messages
      */
     public function normalizeInbound(array $payload): array;
+
+    /**
+     * Normalize delivery/read/failed receipts from a webhook payload.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<int, array{external_id: string, status: string, error_code?: int|string|null, at?: string}>
+     */
+    public function normalizeStatuses(array $payload): array;
 }

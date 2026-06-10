@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Commerce-aware customer record (M8). Tenant-scoped: every query is filtered
@@ -39,5 +40,17 @@ class Contact extends Model
         return [
             'tags' => 'array',
         ];
+    }
+
+    /** @return HasMany<ContactChannel, $this> */
+    public function channels(): HasMany
+    {
+        return $this->hasMany(ContactChannel::class);
+    }
+
+    /** The contact's identity on a given channel, if any. */
+    public function channelFor(string $channel): ?ContactChannel
+    {
+        return $this->channels->firstWhere('channel', $channel);
     }
 }
