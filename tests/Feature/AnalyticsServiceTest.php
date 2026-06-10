@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\AiAction;
+use App\Models\AiAgent;
 use App\Models\Contact;
 use App\Models\Conversation;
 use App\Models\CsatRating;
@@ -105,4 +107,37 @@ it('groups the leaderboard per agent', function () {
     $board = collect(app(AnalyticsService::class)->agentLeaderboard(filters()))->keyBy('name');
     expect($board['Ana']['handled'])->toBe(2);
     expect($board['Ben']['handled'])->toBe(1);
+});
+
+it('aggregates AI performance and close rate', function () {
+    $ws = Workspace::create(['name' => 'AI']);
+    Tenancy::set($ws);
+    $contact = Contact::create(['name' => 'C', 'phone' => '+1'])->id;
+    $c1 = makeConv($ws, $contact, null, ['created_at' => now()]);
+    $c2 = makeConv($ws, $contact, null, ['created_at' => now()]);
+    $agent = AiAgent::create([
+        'workspace_id' => $ws->id, 'name' => 'A', 'enabled' => true, 'mode' => 'auto',
+        'goal' => 'sale', 'channel_scope' => 'all', 'tone' => 'friendly', 'methodology' => 'consultative_spin',
+    ]);
+
+    $log = fn (int $conv, string $type) => AiAction::create([
+        'workspace_id' => $ws->id, 'conversation_id' => $conv, 'ai_agent_id' => $agent->id,
+        'type' => $type, 'payload' => [], 'status' => 'ok', 'created_at' => now(),
+    ]);
+
+    $log($c1->id, 'reply');
+    $log($c1->id, 'reply');
+    $log($c1->id, 'create_lead');
+    $log($c1->id, 'create_order');
+    $log($c2->id, 'reply');
+    $log($c2->id, 'handoff');
+
+    $ai = app(AnalyticsService::class)->aiPerformance(filters());
+
+    expect($ai['engaged'])->toBe(2);       // two distinct conversations got replies
+    expect($ai['replies'])->toBe(3);
+    expect($ai['leads'])->toBe(1);
+    expect($ai['orders'])->toBe(1);
+    expect($ai['handoffs'])->toBe(1);
+    expect($ai['conversion_rate'])->toBe(50.0); // 1 order / 2 engaged
 });

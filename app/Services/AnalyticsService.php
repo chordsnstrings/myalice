@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AiAction;
 use App\Models\Conversation;
 use App\Models\CsatRating;
 use App\Models\Message;
@@ -55,6 +56,12 @@ class AnalyticsService
         return Order::query()
             ->where('source', 'chat')
             ->whereBetween('created_at', [$f->from, $f->to]);
+    }
+
+    /** @return Builder<AiAction> */
+    private function aiActions(AnalyticsFilters $f): Builder
+    {
+        return AiAction::query()->whereBetween('created_at', [$f->from, $f->to]);
     }
 
     /** @return array{conversations:int,avg_response:float,resolution_rate:float,csat:float} */
@@ -261,6 +268,40 @@ class AnalyticsService
                     ->map(fn ($a) => ['name' => $a['name'], 'revenue' => $a['revenue'], 'handled' => $a['handled']])
                     ->all(),
                 'trend' => $this->dailySeries($f, 'revenue'),
+            ];
+        });
+    }
+
+    /**
+     * AI sales-agent performance: action counts and the deal-close rate across
+     * conversations the AI engaged.
+     *
+     * @return array{engaged:int, replies:int, drafts:int, leads:int, orders:int, handoffs:int, errors:int, conversion_rate:float}
+     */
+    public function aiPerformance(AnalyticsFilters $f): array
+    {
+        return $this->remember($f, 'ai-performance', function () use ($f) {
+            $counts = $this->aiActions($f)
+                ->selectRaw('type, count(*) as aggregate')
+                ->groupBy('type')
+                ->pluck('aggregate', 'type');
+
+            $engaged = (int) $this->aiActions($f)
+                ->whereIn('type', ['reply', 'draft'])
+                ->distinct()
+                ->count('conversation_id');
+
+            $orders = (int) ($counts['create_order'] ?? 0);
+
+            return [
+                'engaged' => $engaged,
+                'replies' => (int) ($counts['reply'] ?? 0),
+                'drafts' => (int) ($counts['draft'] ?? 0),
+                'leads' => (int) ($counts['create_lead'] ?? 0),
+                'orders' => $orders,
+                'handoffs' => (int) ($counts['handoff'] ?? 0),
+                'errors' => (int) ($counts['error'] ?? 0),
+                'conversion_rate' => $engaged > 0 ? round($orders / $engaged * 100, 1) : 0.0,
             ];
         });
     }

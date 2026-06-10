@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, TrendingUp, Sparkles } from 'lucide-react';
 import { AppShell } from '@/components/shell/AppShell';
 import { Card } from '@/components/ui/Card';
 import { FilterBar, type AnalyticsFilterState } from '@/components/analytics/FilterBar';
@@ -22,6 +22,16 @@ interface Agent {
     csat: number | null;
     revenue: number;
 }
+interface AiPerformance {
+    engaged: number;
+    replies: number;
+    drafts: number;
+    leads: number;
+    orders: number;
+    handoffs: number;
+    errors: number;
+    conversion_rate: number;
+}
 interface Props {
     kpis: Kpi[];
     revenueTrend: { day: string; value: number }[];
@@ -29,10 +39,11 @@ interface Props {
     recovered: number;
     channels: { channel: string; name: string }[];
     agents: { id: number; name: string }[];
+    ai: AiPerformance | null;
     filters: AnalyticsFilterState;
 }
 
-export default function Dashboard({ kpis, revenueTrend, leaderboard, recovered, channels, agents, filters }: Props) {
+export default function Dashboard({ kpis, revenueTrend, leaderboard, recovered, channels, agents, ai, filters }: Props) {
     const totalRevenue = revenueTrend.reduce((s, d) => s + d.value, 0);
 
     return (
@@ -147,8 +158,38 @@ export default function Dashboard({ kpis, revenueTrend, leaderboard, recovered, 
                         </table>
                         </div>
                     </Card>
+
+                    {ai && (
+                        <Card className="mt-3 p-5">
+                            <div className="mb-4 flex items-center justify-between">
+                                <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+                                    <Sparkles className="size-4 text-accent" /> AI assistant
+                                </h3>
+                                <Link href="/settings/ai-agents" className="text-[13px] font-medium text-accent hover:underline">
+                                    Configure →
+                                </Link>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+                                <AiStat label="Conversations engaged" value={ai.engaged} />
+                                <AiStat label="Replies sent" value={ai.replies} />
+                                <AiStat label="Leads captured" value={ai.leads} />
+                                <AiStat label="Orders created" value={ai.orders} />
+                                <AiStat label="Handoffs" value={ai.handoffs} />
+                                <AiStat label="Close rate" value={`${ai.conversion_rate}%`} accent />
+                            </div>
+                        </Card>
+                    )}
                 </div>
             </div>
         </AppShell>
+    );
+}
+
+function AiStat({ label, value, accent }: { label: string; value: number | string; accent?: boolean }) {
+    return (
+        <div>
+            <p className={cn('text-2xl font-semibold tracking-tight tnum', accent && 'text-success')}>{value}</p>
+            <p className="mt-0.5 text-[12px] text-secondary">{label}</p>
+        </div>
     );
 }

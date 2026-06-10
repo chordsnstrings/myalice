@@ -11,6 +11,8 @@ it('maps plans to cumulative features (§10)', function () {
     expect(Plans::includes('enterprise', 'automation'))->toBeTrue();
     expect(Plans::includes('enterprise', 'llm'))->toBeTrue();
     expect(Plans::includes('business', 'llm'))->toBeFalse();
+    expect(Plans::includes('business', 'ai_agents'))->toBeTrue();
+    expect(Plans::includes('premium', 'ai_agents'))->toBeFalse();
 });
 
 function planUser(string $plan): User
