@@ -105,8 +105,12 @@ class BroadcastController extends Controller
         $audience = ($data['audience_id'] ?? null) ? Audience::find($data['audience_id']) : null;
         $template = ($data['message_template_id'] ?? null) ? MessageTemplate::find($data['message_template_id']) : null;
 
+        // Every broadcast needs message content (a template body).
+        if (! $template) {
+            return back()->withErrors(['message_template_id' => 'Choose a template.']);
+        }
         // WhatsApp broadcasts must use an approved template (Meta policy).
-        if ($data['channel'] === 'whatsapp' && (! $template || ! $template->isSendable())) {
+        if ($data['channel'] === 'whatsapp' && ! $template->isSendable()) {
             return back()->withErrors(['message_template_id' => 'Choose an approved WhatsApp template.']);
         }
 
@@ -123,7 +127,7 @@ class BroadcastController extends Controller
         $broadcast = Broadcast::create([
             'name' => $data['name'],
             'channel' => $data['channel'],
-            'message_template_id' => $template?->id,
+            'message_template_id' => $template->id,
             'variable_map' => $data['variable_map'] ?? [],
             'audience_id' => $audience?->id,
             'credit_cost' => $estimate['cost'],

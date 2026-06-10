@@ -76,11 +76,14 @@ class BroadcastLauncher
             return;
         }
 
-        try {
-            $this->wallet->debit($workspace, $reserved, "Broadcast reserve: {$broadcast->name}");
-        } catch (InsufficientFundsException $e) {
-            $broadcast->update(['status' => 'failed', 'recipients' => $count]);
-            throw $e;
+        // Session channels (Messenger/Instagram) are free — no reserve needed.
+        if ($reserved > 0) {
+            try {
+                $this->wallet->debit($workspace, $reserved, "Broadcast reserve: {$broadcast->name}");
+            } catch (InsufficientFundsException $e) {
+                $broadcast->update(['status' => 'failed', 'recipients' => $count]);
+                throw $e;
+            }
         }
 
         $broadcast->update([
