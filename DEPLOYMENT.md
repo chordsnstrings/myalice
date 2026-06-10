@@ -37,10 +37,17 @@ SESSION_DRIVER=database
 QUEUE_CONNECTION=database
 FILESYSTEM_DISK=s3   AWS_* + AWS_ENDPOINT
 BROADCAST_CONNECTION=pusher   PUSHER_*
+AI_HTTP_TIMEOUT=20   (optional; per-call LLM timeout, kept under the 50s worker cap)
 ```
 Trust proxies and force HTTPS. **`VITE_*` keys (e.g. `VITE_PUSHER_*`, `VITE_META_APP_ID`)
 are baked in at build time** — set them in CI before `npm run build`, not just on the server.
 Channel tokens are added in-app (Settings → Channels), not in `.env`.
+**AI sales agent (M13):** provider API keys (Anthropic/OpenAI/Gemini/DeepSeek/any
+OpenAI-compatible endpoint) are stored **per workspace, encrypted**, via Settings →
+AI agent — never in `.env`. The only env knob is `AI_HTTP_TIMEOUT`. The server must
+allow **outbound HTTPS** to whichever providers your tenants connect (e.g.
+`api.openai.com`, `api.anthropic.com`, `generativelanguage.googleapis.com`, or a
+self-hosted base URL); confirm your egress/firewall policy permits them.
 
 ## E. Scheduling & queue (the SiteGround-specific core)
 10. Add **one cron entry** (Site Tools → Devs → Cron Jobs), every minute:
@@ -51,6 +58,9 @@ Channel tokens are added in-app (Settings → Channels), not in `.env`.
     `queue:work --stop-when-empty --tries=3 --max-time=50` (`->everyMinute()->withoutOverlapping()`),
     `analytics:snapshot` (`->dailyAt('00:20')`, analytics trend rollups),
     plus daily housekeeping (prune batches, clear resets, prune Sanctum tokens).
+    The **AI reply job** (`GenerateAiReply`) rides this same queue — no extra
+    scheduler entry or daemon. Its 35s wall-clock guard fits inside `--max-time=50`,
+    and `tries=1` ensures a retry can never double-message a customer.
 12. Verify PHP `max_execution_time` is `0` or `>60`.
 
 ## F. TLS, verify, operate

@@ -166,6 +166,10 @@ VITE_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
 
 MAIL_MAILER=smtp              # configure your SMTP for password resets etc.
 
+# Optional — AI sales agent (M13). Per-call LLM timeout in seconds; the only AI
+# env knob (provider keys are per-workspace, set in-app — see the note below).
+AI_HTTP_TIMEOUT=20
+
 # Optional — Meta "Connect with Facebook" one-click onboarding (else admins paste
 # tokens manually in Settings → Channels). See docs/CHANNELS.md.
 META_APP_ID=
@@ -187,6 +191,17 @@ VITE_META_GRAPH_VERSION="${META_GRAPH_VERSION}"
 > admins add them in the app (Settings → Channels), stored encrypted. See
 > [`CHANNELS.md`](CHANNELS.md). Analytics, CSAT surveys and the reports need **no**
 > extra configuration — they work from the database out of the box.
+
+> 🤖 **AI sales agent (M13).** LLM provider API keys (Anthropic, OpenAI, Gemini,
+> DeepSeek, or any OpenAI-compatible / self-hosted endpoint) are **not** in `.env`
+> either — each workspace connects its own under **Settings → AI agent**, stored
+> encrypted, verified with a live test call. The feature is plan-gated (Business
+> for `ai_agents`; Enterprise for custom/self-hosted endpoints). `AI_HTTP_TIMEOUT`
+> is the only related env value. **Egress:** the server makes outbound HTTPS calls
+> to whichever providers your tenants connect (`api.openai.com`,
+> `api.anthropic.com`, `generativelanguage.googleapis.com`, or a custom base URL).
+> SiteGround allows outbound HTTPS by default; if you run a stricter egress policy,
+> allow those hosts.
 
 ## 8. First-time app initialization (SSH)
 
@@ -215,9 +230,14 @@ maintenance and **drains the queue** in short, self-terminating bursts.
    * * * * * php /home/USER/www/app.yourbrand.com/artisan schedule:run >> /dev/null 2>&1
    ```
 2. The scheduler ([`routes/console.php`](../routes/console.php)) already runs:
-   - `queue:work --stop-when-empty --tries=3 --max-time=50` (`->everyMinute()->withoutOverlapping()`) — drains the DB queue (inbound/outbound messages, broadcasts, CSAT surveys).
+   - `queue:work --stop-when-empty --tries=3 --max-time=50` (`->everyMinute()->withoutOverlapping()`) — drains the DB queue (inbound/outbound messages, broadcasts, CSAT surveys, and **AI replies**).
    - `analytics:snapshot` (`->dailyAt('00:20')`) — rolls up daily metrics for the analytics trend lines (the dashboard/reports otherwise compute live + cache).
    - daily housekeeping (prune batches, clear password resets, prune Sanctum tokens).
+
+The AI sales agent needs **no** extra cron or worker: when a customer message
+arrives, `GenerateAiReply` is queued (debounced 8s) and drained by the same
+`queue:work` tick. Its 35s wall-clock guard fits inside `--max-time=50`, and the
+job runs `tries=1` so a retry can never double-message a customer.
 
 No `queue:work` daemon, no Horizon, no Supervisor — those will be killed.
 
@@ -236,6 +256,9 @@ Then in a browser:
 - PWA: `curl -I https://app.yourbrand.com/manifest.webmanifest` → 200; in Chrome
   DevTools → Application, the manifest + service worker register and an **Install**
   prompt is offered. On mobile, the bottom tab bar + "More" sheet appear.
+- AI agent (Business+ plan): **Settings → AI agent**, connect a provider (the
+  "Test & connect" step verifies the key with a live call), then use the
+  **playground** — a methodology-driven reply confirms outbound egress works.
 
 ## 11. Backups & rollback
 
@@ -287,3 +310,6 @@ Operational notes:
 | “Install app” never appears | Not HTTPS, or already installed, or manifest 404 | Ensure SSL + `/manifest.webmanifest` reachable; check DevTools → Application |
 | Stale UI after deploy | Old service-worker cache | Reload; if persistent, bump `CACHE` in `public/sw.js` and redeploy |
 | Dashboard trends flat | `analytics:snapshot` never ran | Confirm the cron tick; run `php artisan analytics:snapshot` once to backfill |
+| AI "Test & connect" fails with a valid key | Outbound HTTPS to the provider blocked | Allow egress to the provider host (e.g. `api.openai.com`); for self-hosted, check the base URL is reachable from the server |
+| AI never replies to inbound messages | Plan/mode/cron | Plan must include `ai_agents` (Business+); agent mode ≠ Off in Settings → AI agent; confirm the cron tick drains `GenerateAiReply` |
+| AI menu missing in Settings | Plan or role | `ai_agents` is Business+; the page needs the **manage-bots** capability (owner/manager) |
