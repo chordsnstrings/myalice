@@ -38,6 +38,8 @@ import type { Conversation, Message, PageProps } from '@/types';
 interface Props {
     conversations: Conversation[];
     messages: Record<number, Message[]>;
+    agents: { id: number; name: string }[];
+    templates: { id: number; name: string; body: string }[];
 }
 
 type ComposerState = 'free' | 'template' | 'bot' | 'resolved';
@@ -53,13 +55,14 @@ function StatusTick({ status }: { status?: Message['status'] }) {
     return null;
 }
 
-export default function InboxIndex({ conversations, messages: seed }: Props) {
+export default function InboxIndex({ conversations, messages: seed, agents, templates }: Props) {
     const { toast } = useToast();
     const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>('All');
     const [query, setQuery] = useState('');
     const [selectedId, setSelectedId] = useState<number | null>(conversations[0]?.id ?? null);
     const [threads, setThreads] = useState(seed);
     const [draft, setDraft] = useState('');
+    const [templateOpen, setTemplateOpen] = useState(false);
     const [contextOpen, setContextOpen] = useState(true); // desktop side pane
     const [contextSheet, setContextSheet] = useState(false); // mobile/tablet sheet
     const [mobilePane, setMobilePane] = useState<'list' | 'thread'>('list');
@@ -71,7 +74,12 @@ export default function InboxIndex({ conversations, messages: seed }: Props) {
         if (!echo || !workspaceId) return;
         const channel = echo.private(`workspace.${workspaceId}`);
         channel.listen('.message.created', (e: { conversation_id: number } & Message) => {
-            setThreads((t) => ({ ...t, [e.conversation_id]: [...(t[e.conversation_id] ?? []), e] }));
+            // Dedupe: our own sends are appended optimistically, then echoed back.
+            setThreads((t) => {
+                const list = t[e.conversation_id] ?? [];
+                if (list.some((m) => m.id === e.id)) return t;
+                return { ...t, [e.conversation_id]: [...list, e] };
+            });
         });
         return () => echo.leave(`workspace.${workspaceId}`);
     }, [workspaceId]);
@@ -100,25 +108,58 @@ export default function InboxIndex({ conversations, messages: seed }: Props) {
         return list;
     }, [conversations, activeFilter, query]);
 
-    const send = () => {
-        if (!draft.trim() || !selectedId) return;
-        const optimistic: Message = {
-            id: Date.now(),
-            direction: 'out',
-            author: 'agent',
-            body: draft,
-            sent_at: new Date().toISOString(),
-            status: 'sending',
+    const scrollEnd = () => setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), 20);
+
+    const send = async () => {
+        const text = draft.trim();
+        if (!text || !selectedId || !selected) return;
+        if (selected.window_open === false) {
+            setTemplateOpen(true); // outside the 24h window only a template can be sent
+            return;
+        }
+        const temp: Message = {
+            id: -Date.now(), direction: 'out', author: 'agent', body: text,
+            sent_at: new Date().toISOString(), status: 'sending',
         };
-        setThreads((t) => ({ ...t, [selectedId]: [...(t[selectedId] ?? []), optimistic] }));
+        setThreads((t) => ({ ...t, [selectedId]: [...(t[selectedId] ?? []), temp] }));
         setDraft('');
-        setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), 20);
-        setTimeout(() => {
-            setThreads((t) => ({
-                ...t,
-                [selectedId]: (t[selectedId] ?? []).map((m) => (m.id === optimistic.id ? { ...m, status: 'delivered' } : m)),
-            }));
-        }, 900);
+        scrollEnd();
+        try {
+            const { data } = await window.axios.post(`/conversations/${selectedId}/messages`, { body: text });
+            setThreads((t) => ({ ...t, [selectedId]: (t[selectedId] ?? []).map((m) => (m.id === temp.id ? data.message : m)) }));
+        } catch {
+            setThreads((t) => ({ ...t, [selectedId]: (t[selectedId] ?? []).map((m) => (m.id === temp.id ? { ...m, status: 'failed' as const } : m)) }));
+            toast('Message failed to send', { tone: 'error' });
+        }
+    };
+
+    const sendTemplate = async (templateId: number) => {
+        if (!selectedId) return;
+        try {
+            const { data } = await window.axios.post(`/conversations/${selectedId}/messages`, { template_id: templateId });
+            setThreads((t) => ({ ...t, [selectedId]: [...(t[selectedId] ?? []), data.message] }));
+            setTemplateOpen(false);
+            scrollEnd();
+            toast('Template sent', { tone: 'success' });
+        } catch {
+            toast('Could not send template', { tone: 'error' });
+        }
+    };
+
+    const resolveConversation = () => {
+        if (!selectedId) return;
+        router.put(`/conversations/${selectedId}/resolve`, {}, {
+            preserveScroll: true,
+            onSuccess: () => toast(selected?.status === 'resolved' ? 'Conversation reopened' : 'Conversation resolved', { tone: 'success' }),
+        });
+    };
+
+    const assignConversation = (assigneeId: number | null) => {
+        if (!selectedId) return;
+        router.put(`/conversations/${selectedId}/assign`, { assignee_id: assigneeId }, {
+            preserveScroll: true,
+            onSuccess: () => toast('Assignment updated', { tone: 'success' }),
+        });
     };
 
     const sendAiDraft = (cid: number, mid: number) => {
@@ -260,6 +301,20 @@ export default function InboxIndex({ conversations, messages: seed }: Props) {
                                             AI handed off
                                         </Badge>
                                     )}
+                                    <select
+                                        className="hidden h-8 rounded-[var(--radius-control)] border border-strong bg-surface px-2 text-[12px] text-secondary sm:block"
+                                        value={selected.assignee?.id ?? ''}
+                                        onChange={(e) => assignConversation(e.target.value ? Number(e.target.value) : null)}
+                                        title="Assign to a teammate"
+                                    >
+                                        <option value="">Unassigned</option>
+                                        {agents.map((a) => (
+                                            <option key={a.id} value={a.id}>{a.name}</option>
+                                        ))}
+                                    </select>
+                                    <Button size="sm" variant="secondary" className="hidden sm:inline-flex" onClick={resolveConversation}>
+                                        {selected.status === 'resolved' ? 'Reopen' : 'Resolve'}
+                                    </Button>
                                     <Badge tone={selected.status === 'open' ? 'accent' : 'neutral'} className="hidden sm:inline-flex">
                                         {selected.status}
                                     </Badge>
@@ -342,12 +397,32 @@ export default function InboxIndex({ conversations, messages: seed }: Props) {
 
                             <div className="shrink-0 border-t border-default bg-surface p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                                 {composerState === 'template' && (
-                                    <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-[var(--radius-control)] border border-warning/30 bg-warning-subtle px-3 py-2 text-[12px] text-warning">
-                                        <Lock className="size-4 shrink-0" />
-                                        <span className="flex-1">Outside the 24-hour window — only an approved template can be sent.</span>
-                                        <Button size="sm" variant="secondary" onClick={() => toast('Template picker', { tone: 'info' })}>
-                                            <FileText className="size-3.5" /> Choose template
-                                        </Button>
+                                    <div className="mb-2.5 rounded-[var(--radius-control)] border border-warning/30 bg-warning-subtle px-3 py-2 text-[12px] text-warning">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <Lock className="size-4 shrink-0" />
+                                            <span className="flex-1">Outside the 24-hour window — only an approved template can be sent.</span>
+                                            <Button size="sm" variant="secondary" onClick={() => setTemplateOpen((o) => !o)}>
+                                                <FileText className="size-3.5" /> {templateOpen ? 'Hide templates' : 'Choose template'}
+                                            </Button>
+                                        </div>
+                                        {templateOpen && (
+                                            <div className="mt-2 space-y-1">
+                                                {templates.length === 0 ? (
+                                                    <p className="text-tertiary">No approved templates yet — create one under Templates.</p>
+                                                ) : (
+                                                    templates.map((t) => (
+                                                        <button
+                                                            key={t.id}
+                                                            onClick={() => sendTemplate(t.id)}
+                                                            className="block w-full truncate rounded-[var(--radius-control)] border border-default bg-surface px-2.5 py-1.5 text-start text-secondary hover:bg-surface-hover"
+                                                        >
+                                                            <span className="font-medium text-primary">{t.name}</span>
+                                                            <span className="ms-2 text-tertiary">{t.body.slice(0, 64)}</span>
+                                                        </button>
+                                                    ))
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                                 {composerState === 'resolved' && (

@@ -49,6 +49,10 @@ Route::middleware(['auth', 'workspace'])->group(function () {
     Route::get('/onboarding', fn () => Inertia::render('Onboarding/Wizard'))->name('onboarding');
 
     Route::get('/inbox', [InboxController::class, 'index'])->name('inbox');
+    // Human inbox actions (B3): reply, resolve/reopen, assign.
+    Route::post('/conversations/{conversation}/messages', [InboxController::class, 'reply'])->name('conversations.reply');
+    Route::put('/conversations/{conversation}/resolve', [InboxController::class, 'resolve'])->name('conversations.resolve');
+    Route::put('/conversations/{conversation}/assign', [InboxController::class, 'assign'])->name('conversations.assign');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Manager reports (B10.2–B10.4)
