@@ -90,6 +90,50 @@ it('requires the enterprise plan for custom/self-hosted presets', function () {
     Tenancy::clear();
 });
 
+it('blocks a non-enterprise base_url override on a non-custom preset (SSRF gate)', function () {
+    Http::fake(['*' => Http::response(['choices' => [['message' => ['content' => 'ok']]]], 200)]);
+    $user = aiOwner('business');
+
+    $this->actingAs($user)
+        ->post('/settings/ai-agents/providers', [
+            'preset' => 'openai', 'api_key' => 'sk', 'base_url' => 'http://169.254.169.254/v1',
+        ])
+        ->assertSessionHasErrors('base_url');
+
+    Tenancy::set($user->currentWorkspace);
+    expect(AiProvider::count())->toBe(0);
+    Http::assertNothingSent(); // never probed the attacker URL
+    Tenancy::clear();
+});
+
+it('rejects the cloud-metadata endpoint even for enterprise', function () {
+    Http::fake(['*' => Http::response(['choices' => [['message' => ['content' => 'ok']]]], 200)]);
+    $user = aiOwner('enterprise');
+
+    $this->actingAs($user)
+        ->post('/settings/ai-agents/providers', [
+            'preset' => 'ollama', 'api_key' => 'sk', 'base_url' => 'http://169.254.169.254/v1',
+        ])
+        ->assertSessionHasErrors('base_url');
+
+    Http::assertNothingSent();
+});
+
+it('lets enterprise connect a self-hosted endpoint', function () {
+    Http::fake(['*' => Http::response(['choices' => [['message' => ['content' => 'ok']]]], 200)]);
+    $user = aiOwner('enterprise');
+
+    $this->actingAs($user)
+        ->post('/settings/ai-agents/providers', [
+            'preset' => 'ollama', 'api_key' => 'sk', 'base_url' => 'http://10.0.0.5:11434/v1',
+        ])
+        ->assertRedirect()->assertSessionHasNoErrors();
+
+    Tenancy::set($user->currentWorkspace);
+    expect(AiProvider::first()->credentials['base_url'])->toBe('http://10.0.0.5:11434/v1');
+    Tenancy::clear();
+});
+
 it('updates the agent profile', function () {
     $user = aiOwner();
 

@@ -76,7 +76,7 @@ class AiAgentController extends Controller
             'preset' => ['required', 'string'],
             'api_key' => ['required', 'string'],
             'model' => ['nullable', 'string'],
-            'base_url' => ['nullable', 'string'],
+            'base_url' => ['nullable', 'string', 'url'],
         ]);
 
         $preset = config("ai.presets.{$data['preset']}");
@@ -91,11 +91,29 @@ class AiAgentController extends Controller
             ]);
         }
 
+        // A caller-supplied base_url that differs from the preset's fixed endpoint
+        // is itself a custom endpoint — gate it behind Enterprise too, otherwise a
+        // lower tier could point the server at an arbitrary host (SSRF) by pairing
+        // a non-custom preset with an override URL.
+        $providedBase = trim((string) ($data['base_url'] ?? ''));
+        $presetBase = $preset['base_url'] ?? null;
+        if ($providedBase !== '' && $providedBase !== $presetBase && ! Plans::includes($ws->plan, 'llm')) {
+            throw ValidationException::withMessages([
+                'base_url' => 'A custom endpoint URL requires the Enterprise plan.',
+            ]);
+        }
+
+        $base = $providedBase !== '' ? $providedBase : $presetBase;
+        if ($base !== null && $this->isBlockedEndpoint($base)) {
+            throw ValidationException::withMessages([
+                'base_url' => 'That endpoint URL is not allowed.',
+            ]);
+        }
+
         $credentials = [
             'api_key' => $data['api_key'],
             'model' => ($data['model'] ?? '') ?: $preset['model'],
         ];
-        $base = ($data['base_url'] ?? '') ?: ($preset['base_url'] ?? null);
         if ($base) {
             $credentials['base_url'] = $base;
         }
@@ -258,6 +276,22 @@ class AiAgentController extends Controller
         $message->delete();
 
         return back()->with('success', 'Draft dismissed.');
+    }
+
+    /**
+     * Reject endpoints that should never be a legitimate LLM target. Private LAN
+     * and loopback are intentionally allowed (Enterprise self-hosted Ollama/vLLM),
+     * but the cloud-metadata link-local range never is.
+     */
+    private function isBlockedEndpoint(string $url): bool
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+        if (! is_string($host) || $host === '') {
+            return true; // malformed / unparseable
+        }
+
+        return filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false
+            && str_starts_with($host, '169.254.');
     }
 
     /** @return array<string, mixed> */
