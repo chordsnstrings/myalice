@@ -94,3 +94,113 @@ it('handoff_to_human marks the conversation handed off', function () {
     expect($this->conv->fresh()->ai_status)->toBe('handed_off');
     expect(AiAction::where('type', 'handoff')->exists())->toBeTrue();
 });
+
+function enableDiscount(AiAgent $agent, array $overrides = []): void
+{
+    $agent->update(['guardrails' => ['discount' => array_merge([
+        'enabled' => true,
+        'layers' => [['type' => 'free_shipping'], ['type' => 'cart_percent', 'value' => 5], ['type' => 'cart_percent', 'value' => 50]],
+        'max_percent' => 15,
+        'offer_ttl_minutes' => 60,
+        'once_per_contact' => true,
+    ], $overrides)]]);
+}
+
+it('offer_discount escalates layer by layer and caps the percentage', function () {
+    enableDiscount($this->agent);
+
+    $first = $this->exec->execute(new ToolCall('1', 'offer_discount', ['reason' => 'price objection']), $this->agent, $this->conv);
+    expect($first['type'])->toBe('free_shipping');
+    expect($first['authority_ok'])->toBeTrue();
+
+    $second = $this->exec->execute(new ToolCall('2', 'offer_discount', ['reason' => 'still unsure']), $this->agent, $this->conv);
+    expect($second['type'])->toBe('cart_percent');
+    expect($second['value'])->toBe(5.0);
+
+    $third = $this->exec->execute(new ToolCall('3', 'offer_discount', ['reason' => 'pushing']), $this->agent, $this->conv);
+    expect($third['value'])->toBe(15.0); // 50 capped at max_percent 15
+
+    $fourth = $this->exec->execute(new ToolCall('4', 'offer_discount', ['reason' => 'more']), $this->agent, $this->conv);
+    expect($fourth['ok'])->toBeFalse();
+    expect($fourth['exhausted'])->toBeTrue();
+});
+
+it('once_per_contact blocks a fresh discount ladder in another conversation', function () {
+    enableDiscount($this->agent);
+    $this->exec->execute(new ToolCall('1', 'offer_discount', ['reason' => 'x']), $this->agent, $this->conv);
+
+    $conv2 = Conversation::create(['contact_id' => $this->contact->id, 'channel' => 'web', 'status' => 'open', 'window_open' => true]);
+    $result = $this->exec->execute(new ToolCall('2', 'offer_discount', ['reason' => 'y']), $this->agent, $conv2);
+
+    expect($result['ok'])->toBeFalse();
+});
+
+it('create_order applies a previously offered cart discount, server-computed', function () {
+    enableDiscount($this->agent, ['layers' => [['type' => 'cart_percent', 'value' => 10]]]);
+    $p = Product::create(['workspace_id' => $this->ws->id, 'title' => 'Mug', 'price' => 100, 'currency' => 'USD', 'stock' => 5]);
+    $this->exec->execute(new ToolCall('1', 'offer_discount', ['reason' => 'price']), $this->agent, $this->conv);
+
+    $result = $this->exec->execute(
+        new ToolCall('2', 'create_order', ['items' => [['product_id' => $p->id, 'qty' => 2]], 'apply_offer' => true]),
+        $this->agent, $this->conv,
+    );
+
+    expect($result['ok'])->toBeTrue();
+    $order = Order::first();
+    expect((float) $order->subtotal)->toBe(200.0);
+    expect((float) $order->discount_amount)->toBe(20.0); // 10% of 200
+    expect((float) $order->total)->toBe(180.0);
+    expect($order->discount_type)->toBe('cart_percent');
+});
+
+it('ignores an expired discount offer at order time', function () {
+    enableDiscount($this->agent, ['layers' => [['type' => 'cart_percent', 'value' => 10]]]);
+    $p = Product::create(['workspace_id' => $this->ws->id, 'title' => 'Mug', 'price' => 100, 'currency' => 'USD', 'stock' => 5]);
+    AiAction::create([
+        'workspace_id' => $this->ws->id, 'conversation_id' => $this->conv->id, 'ai_agent_id' => $this->agent->id,
+        'type' => 'offer_discount', 'status' => 'ok',
+        'payload' => ['layer' => 0, 'type' => 'cart_percent', 'value' => 10, 'expires_at' => now()->subMinute()->toIso8601String()],
+        'created_at' => now()->subHour(),
+    ]);
+
+    $result = $this->exec->execute(
+        new ToolCall('1', 'create_order', ['items' => [['product_id' => $p->id, 'qty' => 1]], 'apply_offer' => true]),
+        $this->agent, $this->conv,
+    );
+
+    expect((float) Order::first()->discount_amount)->toBe(0.0);
+    expect((float) $result['total'])->toBe(100.0);
+});
+
+it('applies the service percentage only to service line items', function () {
+    enableDiscount($this->agent, ['layers' => [['type' => 'service_percent']], 'service_percent' => 10]);
+    $good = Product::create(['workspace_id' => $this->ws->id, 'title' => 'Mug', 'price' => 100, 'currency' => 'USD', 'stock' => 5, 'type' => 'product']);
+    $svc = Product::create(['workspace_id' => $this->ws->id, 'title' => 'Setup', 'price' => 200, 'currency' => 'USD', 'stock' => 5, 'type' => 'service']);
+    $this->exec->execute(new ToolCall('1', 'offer_discount', ['reason' => 'price']), $this->agent, $this->conv);
+
+    $this->exec->execute(
+        new ToolCall('2', 'create_order', ['items' => [
+            ['product_id' => $good->id, 'qty' => 1],
+            ['product_id' => $svc->id, 'qty' => 1],
+        ], 'apply_offer' => true]),
+        $this->agent, $this->conv,
+    );
+
+    $order = Order::first();
+    expect((float) $order->subtotal)->toBe(300.0);
+    expect((float) $order->discount_amount)->toBe(20.0); // 10% of the 200 service only
+    expect((float) $order->total)->toBe(280.0);
+});
+
+it('skips the discount below the minimum order value', function () {
+    enableDiscount($this->agent, ['layers' => [['type' => 'cart_percent', 'value' => 10]], 'min_order_value' => 500]);
+    $p = Product::create(['workspace_id' => $this->ws->id, 'title' => 'Mug', 'price' => 100, 'currency' => 'USD', 'stock' => 5]);
+    $this->exec->execute(new ToolCall('1', 'offer_discount', ['reason' => 'price']), $this->agent, $this->conv);
+
+    $this->exec->execute(
+        new ToolCall('2', 'create_order', ['items' => [['product_id' => $p->id, 'qty' => 1]], 'apply_offer' => true]),
+        $this->agent, $this->conv,
+    );
+
+    expect((float) Order::first()->discount_amount)->toBe(0.0);
+});

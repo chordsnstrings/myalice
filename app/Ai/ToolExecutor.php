@@ -9,6 +9,7 @@ use App\Models\Message;
 use App\Models\Order;
 use App\Models\Product;
 use App\Services\RoutingService;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -49,15 +50,28 @@ class ToolExecutor
             ],
         ];
 
+        // Pre-approved discounts (auto + autopilot). The model only asks for the
+        // NEXT layer; the server picks and caps the actual concession.
+        if ($agent->guardConfig()['discount']['enabled'] ?? false) {
+            $tools[] = [
+                'name' => 'offer_discount',
+                'description' => 'Request the next pre-approved discount layer when the customer shows buying intent but hesitates (e.g. price objection). The system decides the exact, capped concession — you cannot choose the amount. Present what it returns; do not promise discounts otherwise.',
+                'parameters' => ['type' => 'object', 'properties' => [
+                    'reason' => ['type' => 'string', 'description' => 'The hesitation signal you observed (for the audit log)'],
+                ], 'required' => ['reason']],
+            ];
+        }
+
         if ($agent->mode === 'autopilot') {
             $tools[] = [
                 'name' => 'create_order',
-                'description' => 'Create a store order from catalog products once the customer agrees to buy.',
+                'description' => 'Create a store order from catalog products once the customer agrees to buy. Set apply_offer=true to apply the discount you already offered via offer_discount.',
                 'parameters' => ['type' => 'object', 'properties' => [
                     'items' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                         'product_id' => ['type' => 'integer'],
                         'qty' => ['type' => 'integer'],
                     ], 'required' => ['product_id', 'qty']]],
+                    'apply_offer' => ['type' => 'boolean', 'description' => 'Apply the latest non-expired discount offered in this chat'],
                 ], 'required' => ['items']],
             ];
             $tools[] = [
@@ -83,6 +97,7 @@ class ToolExecutor
             'create_lead' => $this->createLead($call, $agent, $conversation),
             'create_order' => $this->createOrder($call, $agent, $conversation),
             'send_payment_link' => $this->sendPaymentLink($call, $agent, $conversation),
+            'offer_discount' => $this->offerDiscount($call, $agent, $conversation),
             'handoff_to_human' => $this->handoff($call, $agent, $conversation),
             default => ['ok' => false, 'error' => 'unknown tool'],
         };
@@ -130,11 +145,23 @@ class ToolExecutor
             }
             $total += (float) $product->price * $qty; // price from DB, never the model
             $currency = $product->currency;
-            $lines[] = ['title' => $product->title, 'qty' => $qty, 'price' => (float) $product->price];
+            $lines[] = ['title' => $product->title, 'qty' => $qty, 'price' => (float) $product->price, 'type' => $product->type];
         }
 
+        $subtotal = round($total, 2);
+
+        // Apply a previously-offered, non-expired discount (server-computed only).
+        $discountType = null;
+        $discountAmount = 0.0;
+        $shippingAmount = 0.0;
+        if ($call->arguments['apply_offer'] ?? false) {
+            [$discountType, $discountAmount, $shippingAmount] = $this->applyOffer($c, $agent, $lines, $subtotal);
+        }
+
+        $finalTotal = round($subtotal - $discountAmount + $shippingAmount, 2);
+
         $cap = $agent->guardConfig()['order_total_cap'];
-        if ($cap !== null && $total > (float) $cap) {
+        if ($cap !== null && $finalTotal > (float) $cap) {
             $this->handoff(new ToolCall($call->id, 'handoff_to_human', ['reason' => 'order over cap']), $agent, $c);
 
             return ['ok' => false, 'error' => 'Order exceeds the auto-approval limit; a teammate will confirm it.'];
@@ -143,7 +170,11 @@ class ToolExecutor
         $order = Order::create([
             'contact_id' => $c->contact_id,
             'number' => 'AI-'.strtoupper(Str::random(8)),
-            'total' => round($total, 2),
+            'subtotal' => $subtotal,
+            'discount_type' => $discountType,
+            'discount_amount' => round($discountAmount, 2),
+            'shipping_amount' => round($shippingAmount, 2),
+            'total' => $finalTotal,
             'currency' => $currency,
             'status' => 'pending',
             'source' => 'chat',
@@ -151,18 +182,148 @@ class ToolExecutor
         ]);
 
         $summary = collect($lines)->map(fn ($l) => "{$l['qty']}× {$l['title']}")->implode(', ');
+        $discountNote = $discountAmount > 0 ? ' (−'.round($discountAmount, 2)." {$currency})" : '';
         Message::create([
             'conversation_id' => $c->id,
             'direction' => 'out',
             'author' => 'system',
-            'body' => "Order {$order->number} created — {$summary} · ".round($total, 2)." {$currency}",
+            'body' => "Order {$order->number} created — {$summary} · {$finalTotal} {$currency}{$discountNote}",
             'status' => 'sent',
             'sent_at' => now(),
         ]);
 
-        $this->log($agent, $c, 'create_order', ['order_id' => $order->id, 'total' => round($total, 2)]);
+        $this->log($agent, $c, 'create_order', [
+            'order_id' => $order->id,
+            'subtotal' => $subtotal,
+            'discount_type' => $discountType,
+            'discount_amount' => round($discountAmount, 2),
+            'total' => $finalTotal,
+        ]);
 
-        return ['ok' => true, 'order_id' => $order->id, 'number' => $order->number, 'total' => round($total, 2), 'currency' => $currency];
+        return ['ok' => true, 'order_id' => $order->id, 'number' => $order->number, 'subtotal' => $subtotal, 'discount_amount' => round($discountAmount, 2), 'total' => $finalTotal, 'currency' => $currency];
+    }
+
+    /**
+     * Hand out the next pre-approved discount layer for this conversation. The model
+     * never names an amount — escalation index and caps are enforced here.
+     *
+     * @return array<string, mixed>
+     */
+    private function offerDiscount(ToolCall $call, AiAgent $agent, Conversation $c): array
+    {
+        $cfg = $agent->guardConfig()['discount'];
+        if (! ($cfg['enabled'] ?? false)) {
+            return ['ok' => false, 'error' => 'Discounts are not enabled.'];
+        }
+
+        $layers = array_values((array) ($cfg['layers'] ?? []));
+        if ($layers === []) {
+            return ['ok' => false, 'error' => 'No discount layers are configured.'];
+        }
+
+        // Escalation: the Nth offer in this conversation reveals the Nth layer.
+        $index = AiAction::where('conversation_id', $c->id)->where('type', 'offer_discount')->where('status', 'ok')->count();
+        if ($index >= count($layers)) {
+            return ['ok' => false, 'exhausted' => true, 'error' => 'All discount layers have already been offered.'];
+        }
+
+        // once_per_contact: don't start a fresh discount ladder for someone who was
+        // already offered one in another conversation.
+        if (($cfg['once_per_contact'] ?? true) && $index === 0 && $c->contact_id) {
+            $otherConvIds = Conversation::where('contact_id', $c->contact_id)->where('id', '!=', $c->id)->pluck('id');
+            if ($otherConvIds->isNotEmpty()
+                && AiAction::whereIn('conversation_id', $otherConvIds)->where('type', 'offer_discount')->where('status', 'ok')->exists()) {
+                return ['ok' => false, 'error' => 'This customer has already received a discount offer.'];
+            }
+        }
+
+        $layer = $layers[$index];
+        $maxPercent = (float) ($cfg['max_percent'] ?? 15);
+        $type = $layer['type'] ?? 'cart_percent';
+        $ttl = (int) ($cfg['offer_ttl_minutes'] ?? 60);
+        $expiresAt = now()->addMinutes($ttl);
+
+        [$value, $description] = match ($type) {
+            'free_shipping' => [(float) ($cfg['shipping_fee'] ?? 0), 'free shipping on this order'],
+            'service_percent' => [
+                $v = min((float) ($cfg['service_percent'] ?? 0), $maxPercent),
+                $this->pct($v).'% off services',
+            ],
+            default => [
+                $v = min((float) ($layer['value'] ?? 0), $maxPercent),
+                $this->pct($v).'% off your order',
+            ],
+        };
+
+        $payload = ['layer' => $index, 'type' => $type, 'value' => $value, 'expires_at' => $expiresAt->toIso8601String(), 'reason' => $call->arguments['reason'] ?? null];
+        $this->log($agent, $c, 'offer_discount', $payload);
+
+        return [
+            'ok' => true,
+            'type' => $type,
+            'value' => $value,
+            'description' => $description,
+            'expires_at' => $expiresAt->toIso8601String(),
+            'expires_in_minutes' => $ttl,
+            'authority_ok' => true, // the prompt may now use the management-approval frame
+        ];
+    }
+
+    /**
+     * Resolve the latest valid offer for this conversation into a concrete
+     * discount against the cart. Returns [discount_type, discount_amount, shipping_amount].
+     *
+     * @param  list<array<string, mixed>>  $lines
+     * @return array{0:string|null,1:float,2:float}
+     */
+    private function applyOffer(Conversation $c, AiAgent $agent, array $lines, float $subtotal): array
+    {
+        $cfg = $agent->guardConfig()['discount'];
+        if (! ($cfg['enabled'] ?? false) || $subtotal < (float) ($cfg['min_order_value'] ?? 0)) {
+            return [null, 0.0, 0.0];
+        }
+
+        $offer = AiAction::where('conversation_id', $c->id)->where('type', 'offer_discount')->where('status', 'ok')->latest('id')->first();
+        if (! $offer) {
+            return [null, 0.0, 0.0];
+        }
+        $payload = $offer->payload ?? [];
+        if (empty($payload['expires_at']) || now()->greaterThan(Carbon::parse($payload['expires_at']))) {
+            return [null, 0.0, 0.0]; // expired offers are never honoured
+        }
+
+        $maxPercent = (float) ($cfg['max_percent'] ?? 15);
+        $value = min((float) ($payload['value'] ?? 0), $maxPercent);
+
+        return match ($payload['type'] ?? null) {
+            'free_shipping' => ['free_shipping', 0.0, 0.0], // no shipping is charged on chat orders today
+            'cart_percent' => ['cart_percent', round($subtotal * $value / 100, 2), 0.0],
+            'service_percent' => ['service_percent', round($this->serviceSubtotal($lines) * $value / 100, 2), 0.0],
+            default => [null, 0.0, 0.0],
+        };
+    }
+
+    /**
+     * Sum of the service-type line items (for the pre-approved service %).
+     *
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function serviceSubtotal(array $lines): float
+    {
+        $sum = 0.0;
+        foreach ($lines as $l) {
+            if (($l['type'] ?? 'product') === 'service') {
+                $sum += (float) $l['price'] * (int) $l['qty'];
+            }
+        }
+
+        return $sum;
+    }
+
+    /** Format a percentage without trailing zeros (10.0 -> "10", 7.5 -> "7.5"). */
+    private function pct(float $value): string
+    {
+        return rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
     }
 
     /** @return array<string, mixed> */
