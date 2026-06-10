@@ -49,12 +49,45 @@ it('lists only in-stock catalog products and never invents prices', function () 
 
     expect($prompt)->toContain('Blue Mug');
     expect($prompt)->not->toContain('Sold Out Mug');
-    expect($prompt)->toContain('never invent or discount');
+    expect($prompt)->toContain('never invent prices');
 });
 
 it('exports preset metadata for the admin UI', function () {
     $presets = Prompts::presets();
 
-    expect($presets)->toHaveKeys(['tones', 'methodologies', 'goals', 'modes']);
+    expect($presets)->toHaveKeys(['tones', 'methodologies', 'goals', 'modes', 'closure_techniques', 'discount_types']);
     expect(collect($presets['methodologies'])->pluck('value'))->toContain('consultative_spin', 'direct_closer', 'lead_capture');
+    expect(collect($presets['closure_techniques'])->pluck('value'))->toContain('fomo', 'authority');
+});
+
+it('omits closing/discount sections unless enabled', function () {
+    $prompt = Prompts::system(promptAgent(), $this->ws, null, new Conversation(['channel' => 'web']));
+
+    expect($prompt)->not->toContain('CLOSING TACTICS');
+    expect($prompt)->not->toContain('DISCOUNT STRATEGY');
+});
+
+it('injects enabled closing tactics with the gated authority frame', function () {
+    $agent = promptAgent(['guardrails' => ['closure_techniques' => ['fomo', 'authority']]]);
+
+    $prompt = Prompts::system($agent, $this->ws, null, new Conversation(['channel' => 'web']));
+
+    expect($prompt)->toContain('CLOSING TACTICS');
+    expect($prompt)->toContain('FOMO');
+    // authority framing must be gated to a real, granted concession
+    expect($prompt)->toContain('ONLY immediately after offer_discount');
+    expect($prompt)->not->toContain('Anchoring'); // not enabled
+});
+
+it('injects the discount strategy when layers are configured', function () {
+    $agent = promptAgent(['guardrails' => ['discount' => [
+        'enabled' => true,
+        'layers' => [['type' => 'cart_percent', 'value' => 10]],
+    ]]]);
+
+    $prompt = Prompts::system($agent, $this->ws, null, new Conversation(['channel' => 'web']));
+
+    expect($prompt)->toContain('DISCOUNT STRATEGY');
+    expect($prompt)->toContain('ONE LAYER AT A TIME');
+    expect($prompt)->toContain('apply_offer=true');
 });
