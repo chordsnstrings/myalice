@@ -38,4 +38,27 @@ class WhatsAppWebhookController extends MetaWebhookController
 
         return md5($request->getContent());
     }
+
+    protected function templateStatusUpdates(array $payload): array
+    {
+        $updates = [];
+
+        foreach (data_get($payload, 'entry', []) as $entry) {
+            foreach (data_get($entry, 'changes', []) as $change) {
+                if (data_get($change, 'field') !== 'message_template_status_update') {
+                    continue;
+                }
+                $value = data_get($change, 'value', []);
+                $updates[] = [
+                    'meta_template_id' => (string) data_get($value, 'message_template_id', ''),
+                    'name' => (string) data_get($value, 'message_template_name', ''),
+                    'language' => (string) data_get($value, 'message_template_language', ''),
+                    'event' => (string) data_get($value, 'event', ''),
+                    'reason' => data_get($value, 'reason'),
+                ];
+            }
+        }
+
+        return $updates;
+    }
 }

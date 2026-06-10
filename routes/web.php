@@ -82,6 +82,12 @@ Route::middleware(['auth', 'workspace'])->group(function () {
         Route::post('/broadcasts', [BroadcastController::class, 'store'])->name('broadcasts.store');
     });
     Route::get('/templates', [TemplateController::class, 'index'])->name('templates');
+    Route::middleware('can:manage-bots')->group(function () {
+        Route::post('/templates', [TemplateController::class, 'store'])->name('templates.store');
+        Route::put('/templates/{template}', [TemplateController::class, 'update'])->name('templates.update');
+        Route::post('/templates/{template}/submit', [TemplateController::class, 'submit'])->name('templates.submit');
+        Route::post('/templates/sync', [TemplateController::class, 'sync'])->name('templates.sync');
+    });
 
     // Automations
     Route::get('/automations', [AutomationController::class, 'index'])->middleware('can:use-automation')->name('automations');
