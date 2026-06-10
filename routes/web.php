@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiAgentController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\BroadcastController;
@@ -98,4 +99,16 @@ Route::middleware(['auth', 'workspace'])->group(function () {
     Route::get('/settings/profile', [SettingsController::class, 'profile'])->name('settings.profile');
     Route::get('/settings/widget', [SettingsController::class, 'widget'])->name('settings.widget');
     Route::get('/settings/qr', [SettingsController::class, 'qr'])->name('settings.qr');
+
+    // AI sales agent (M13) — admin only + plan-gated.
+    Route::middleware(['can:manage-bots', 'can:use-ai-agents'])->group(function () {
+        Route::get('/settings/ai-agents', [AiAgentController::class, 'index'])->name('settings.ai-agents');
+        Route::post('/settings/ai-agents/providers', [AiAgentController::class, 'connectProvider'])->name('ai.providers.connect');
+        Route::put('/settings/ai-agents/providers/{provider}/default', [AiAgentController::class, 'setDefault'])->name('ai.providers.default');
+        Route::delete('/settings/ai-agents/providers/{provider}', [AiAgentController::class, 'disconnectProvider'])->name('ai.providers.disconnect');
+        Route::put('/settings/ai-agents/agent', [AiAgentController::class, 'updateAgent'])->name('ai.agent.update');
+        Route::post('/settings/ai-agents/playground', [AiAgentController::class, 'playground'])->name('ai.playground');
+        Route::post('/inbox/ai-drafts/{message}/send', [AiAgentController::class, 'sendDraft'])->name('ai.drafts.send');
+        Route::delete('/inbox/ai-drafts/{message}', [AiAgentController::class, 'dismissDraft'])->name('ai.drafts.dismiss');
+    });
 });

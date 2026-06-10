@@ -21,6 +21,7 @@ export interface Capabilities {
     manage_team?: boolean;
     manage_channels?: boolean;
     manage_api?: boolean;
+    manage_bots?: boolean;
 }
 
 export interface PageProps {

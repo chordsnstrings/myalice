@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
                     'manage_team' => $user->can('manage-team'),
                     'manage_channels' => $user->can('manage-channels'),
                     'manage_api' => $user->can('manage-api'),
+                    'manage_bots' => $user->can('manage-bots'),
                 ] : [],
                 'features' => $workspace ? Plans::features($workspace->plan) : [],
             ],

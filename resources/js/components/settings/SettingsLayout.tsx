@@ -8,6 +8,7 @@ const nav: { label: string; href: string; cap?: keyof Capabilities }[] = [
     { label: 'Workspace', href: '/settings' },
     { label: 'Team & roles', href: '/settings/team', cap: 'manage_team' },
     { label: 'Channels', href: '/settings/channels', cap: 'manage_channels' },
+    { label: 'AI agent', href: '/settings/ai-agents', cap: 'manage_bots' },
     { label: 'Business hours', href: '/settings/hours' },
     { label: 'Quick replies & tags', href: '/settings/content' },
     { label: 'Web widget', href: '/settings/widget' },
