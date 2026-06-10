@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AiAgentController;
+use App\Http\Controllers\AudienceController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\BroadcastController;
@@ -80,7 +81,15 @@ Route::middleware(['auth', 'workspace'])->group(function () {
     Route::middleware('can:create-broadcasts')->group(function () {
         Route::get('/broadcasts/create', [BroadcastController::class, 'create'])->name('broadcasts.create');
         Route::post('/broadcasts', [BroadcastController::class, 'store'])->name('broadcasts.store');
+        Route::post('/broadcasts/preview', [BroadcastController::class, 'preview'])->name('broadcasts.preview');
+        Route::post('/broadcasts/test', [BroadcastController::class, 'testSend'])->name('broadcasts.test');
+        Route::put('/broadcasts/{broadcast}/pause', [BroadcastController::class, 'pause'])->name('broadcasts.pause');
+        Route::put('/broadcasts/{broadcast}/resume', [BroadcastController::class, 'resume'])->name('broadcasts.resume');
+        Route::delete('/broadcasts/{broadcast}', [BroadcastController::class, 'cancel'])->name('broadcasts.cancel');
+        Route::post('/audiences', [AudienceController::class, 'store'])->name('audiences.store');
+        Route::post('/audiences/preview', [AudienceController::class, 'preview'])->name('audiences.preview');
     });
+    Route::get('/broadcasts/{broadcast}', [BroadcastController::class, 'show'])->name('broadcasts.show');
     Route::get('/templates', [TemplateController::class, 'index'])->name('templates');
     Route::middleware('can:manage-bots')->group(function () {
         Route::post('/templates', [TemplateController::class, 'store'])->name('templates.store');

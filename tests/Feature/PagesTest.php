@@ -62,6 +62,8 @@ it('exposes the broadcast wallet pre-flight figures', function () {
         ->assertInertia(fn ($page) => $page
             ->component('Broadcasts/Create')
             ->where('wallet', 128.5)
-            ->has('price_per_message')
+            ->has('templates')
+            ->has('audiences')
+            ->has('contact_fields')
         );
 });

@@ -24,9 +24,12 @@ interface Broadcast {
 const tone: Record<string, 'neutral' | 'warning' | 'success' | 'info' | 'danger'> = {
     draft: 'neutral',
     scheduled: 'info',
+    launching: 'warning',
     sending: 'warning',
     sent: 'success',
+    completed: 'success',
     paused: 'warning',
+    canceled: 'neutral',
     failed: 'danger',
 };
 
@@ -36,10 +39,10 @@ export default function BroadcastsIndex({ broadcasts }: { broadcasts: Broadcast[
             key: 'name',
             header: 'Broadcast',
             render: (b) => (
-                <div>
-                    <p className="font-medium text-primary">{b.name}</p>
+                <Link href={`/broadcasts/${b.id}`} className="block">
+                    <p className="font-medium text-accent hover:underline">{b.name}</p>
                     {b.template && <p className="text-[12px] text-tertiary">{b.template}</p>}
-                </div>
+                </Link>
             ),
         },
         { key: 'status', header: 'Status', render: (b) => <Badge tone={tone[b.status] ?? 'neutral'}>{b.status}</Badge> },

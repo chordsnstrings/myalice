@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Models\Broadcast;
+use App\Models\BroadcastRecipient;
 use App\Models\Message;
 use App\Models\Workspace;
 use App\Support\Tenancy;
@@ -51,6 +53,12 @@ class ReconcileDeliveryStatus implements ShouldQueue
                     continue;
                 }
 
+                // Broadcast recipients are keyed by the provider message id.
+                $recipient = BroadcastRecipient::where('provider_message_id', $status['external_id'])->first();
+                if ($recipient) {
+                    $this->applyToRecipient($recipient, $code);
+                }
+
                 $message = Message::where('external_id', $status['external_id'])->first();
                 if (! $message) {
                     continue;
@@ -69,6 +77,31 @@ class ReconcileDeliveryStatus implements ShouldQueue
             }
         } finally {
             Tenancy::clear();
+        }
+    }
+
+    /** Advance a broadcast recipient's status (+ broadcast counters) without regressing. */
+    private function applyToRecipient(BroadcastRecipient $recipient, string $code): void
+    {
+        if ($code === 'failed') {
+            if ($recipient->status !== 'failed') {
+                $recipient->update(['status' => 'failed']);
+                Broadcast::where('id', $recipient->broadcast_id)->increment('failed');
+            }
+
+            return;
+        }
+
+        if (! isset(self::RANK[$code]) || (self::RANK[$code] <= (self::RANK[$recipient->status] ?? -1))) {
+            return;
+        }
+
+        $recipient->update(['status' => $code, $code.'_at' => now()]);
+
+        if ($code === 'delivered') {
+            Broadcast::where('id', $recipient->broadcast_id)->increment('delivered');
+        } elseif ($code === 'read') {
+            Broadcast::where('id', $recipient->broadcast_id)->increment('read');
         }
     }
 

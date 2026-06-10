@@ -24,6 +24,9 @@ Schedule::command('ai:reengage')->hourly()->withoutOverlapping();
 // Pull WhatsApp template approval statuses from Meta (async approvals).
 Schedule::command('templates:sync')->everyThirtyMinutes()->withoutOverlapping();
 
+// Launch broadcasts whose scheduled time has arrived.
+Schedule::command('broadcasts:launch-due')->everyMinute()->withoutOverlapping();
+
 // Housekeeping kept light to respect shared-CPU limits.
 Schedule::command('queue:prune-batches --hours=48')->daily();
 Schedule::command('auth:clear-resets')->daily();
