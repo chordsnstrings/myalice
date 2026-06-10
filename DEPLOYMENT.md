@@ -75,6 +75,9 @@ self-hosted base URL); confirm your egress/firewall policy permits them.
     S3 upload; `/manifest.webmanifest` → 200 + installable in Chrome.
 15. **Backups & rollback:** DB backups; keep a previous-release directory for instant rollback.
 16. **Staging → prod discipline:** deploy to staging, smoke, then promote. Separate DBs/credentials per env.
+17. **Turn on the AI sales agent:** all in-app under **Settings → AI agent** (Business+ plan, owner/manager).
+    Connect a model, pick an autonomy mode, optionally enable the discount ladder + 23h re-engagement.
+    Full plain-language, click-by-click walkthrough: **[`docs/DEPLOY_SITEGROUND.md` §14](docs/DEPLOY_SITEGROUND.md#14-turn-on-the-ai-sales-agent-first-run-setup-in-plain-english)**.
 
 ## Local development
 ```

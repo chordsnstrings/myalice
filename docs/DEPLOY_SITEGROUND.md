@@ -259,6 +259,7 @@ Then in a browser:
 - AI agent (Business+ plan): **Settings → AI agent**, connect a provider (the
   "Test & connect" step verifies the key with a live call), then use the
   **playground** — a methodology-driven reply confirms outbound egress works.
+  For the full click-by-click setup, see **[Section 14](#14-turn-on-the-ai-sales-agent-first-run-setup-in-plain-english)**.
 
 ## 11. Backups & rollback
 
@@ -292,6 +293,178 @@ Operational notes:
   constant at the top of `public/sw.js` to invalidate old caches.
 - **Don't** put `manifest.webmanifest`, `sw.js`, or `/icons` behind auth or a
   rewrite — they must be reachable at the site root.
+
+---
+
+## 14. Turn on the AI sales agent (first-run setup, in plain English)
+
+This section is for the person configuring the app in the browser **after** it's
+deployed. No coding — every setting lives in the admin panel. Do the steps in
+order; each one builds on the last.
+
+> **Before you start, two requirements:**
+> 1. **Plan.** The workspace must be on the **Business** plan or higher. On Premium
+>    the "AI agent" menu is hidden. (Enterprise unlocks one extra thing: connecting
+>    your *own* self-hosted model — see step 14.2.)
+> 2. **Your role.** You must be an **Owner** or **Manager**. Agents can't see these
+>    settings.
+>
+> You'll find everything under **Settings → AI agent** in the left sidebar.
+
+### 14.1 Get an AI model API key (one-time, outside the app)
+
+The AI needs a "brain" — a Large Language Model from a provider. Pick **one** to
+start (you can add more later as backups):
+
+- **OpenAI** — sign up at platform.openai.com, create an API key.
+- **Anthropic (Claude)** — console.anthropic.com.
+- **Google Gemini** — aistudio.google.com.
+- **DeepSeek** — platform.deepseek.com (cheapest of the four).
+
+Copy the key somewhere safe for a minute. **You only paste it once** — the app
+encrypts it and never shows it again.
+
+### 14.2 Connect the model
+
+1. Go to **Settings → AI agent**.
+2. Under **Models**, click **Connect** on the provider you chose.
+3. Paste your **API key**. (Optionally change the **Model** name if you want a
+   specific version. Leave it as-is if unsure.)
+4. Click **Test & connect**. The app sends one tiny test message to the provider
+   to make sure the key works *before* saving. If the key is wrong you'll get a
+   clear error and nothing is saved.
+5. The first model you connect automatically becomes the **Default** (the one the
+   AI uses). Connect a second provider if you want an automatic **fallback** for
+   when the first is down — use the **star** icon to choose which is default.
+
+> **Enterprise only — your own model.** If you run your own model (e.g. Llama via
+> Ollama/vLLM) or a niche provider, choose **Self-hosted** and enter its **Base
+> URL** (e.g. `http://10.0.0.5:11434/v1`). This requires the Enterprise plan and
+> the server must be able to reach that address.
+
+### 14.3 Choose how independent the AI should be (autonomy mode)
+
+Still on **Settings → AI agent**, in the **Agent** card, pick a **mode**. Start
+cautious and increase trust over time:
+
+| Mode | What it does | Good for |
+|---|---|---|
+| **Off** | The AI never replies. | Pausing everything. |
+| **Suggest** | Writes a **draft** reply; a human reviews and clicks Send in the inbox. | Week 1 — watch what it writes. |
+| **Auto-reply** | Replies on its own. Can capture leads and hand off to a human. | Most teams. |
+| **Autopilot** | Also creates **orders**, sends **payment links**, and applies **discounts** by itself. | When you trust it to close deals. |
+
+**Recommended path:** start in **Suggest** for a few days, read the drafts, then
+move to **Auto-reply**, and finally **Autopilot** once you're happy.
+
+### 14.4 Tell the AI about your business
+
+In the same card:
+
+- **Goal** — what success means: **Sale** (drive to a completed order), **Lead**
+  (collect and qualify contacts), or **Support** (answer questions).
+- **Tone** — Friendly / Professional / Playful / Formal. (Friendly converts best
+  for most DTC brands.)
+- **Sales methodology** — how it sells: **Consultative** (asks questions first),
+  **Direct closer** (leads with the offer), or **Lead capture** (focus on getting
+  contact details).
+- **Business profile** — a short paragraph: what you sell, who you serve, shipping
+  and returns, what makes you different. The more you write, the smarter it sounds.
+- **Custom instructions** — anything specific: promos to mention, phrases to avoid.
+
+Your live product catalog (prices and stock) is added automatically — the AI can
+**only** quote real prices from it and can never invent a discount.
+
+### 14.5 Set the safety guardrails
+
+In the **Guardrails** box:
+
+- **Engage new conversations** — on = it greets brand-new chats automatically.
+- **Max messages before handoff** — after this many back-and-forths it passes the
+  chat to a human instead of looping forever. (12 is a sensible default.)
+- **Auto-order cap** — the biggest order total it's allowed to create on its own;
+  anything larger goes to a human. **Leave blank to never auto-create orders.**
+- **Handoff keywords** — words that instantly route to a human (e.g. `refund`,
+  `human`, `complaint`).
+
+### 14.6 (Optional) Turn on high-closure tactics
+
+In the **Closing tactics** card, tick the persuasion techniques you're comfortable
+with. Each is kept **honest** by the system:
+
+- **FOMO / Urgency** — only tied to a *real* deadline or low stock.
+- **Scarcity** — only when catalog stock is genuinely low.
+- **Social proof, Anchoring, Assumptive close** — standard sales moves.
+- **Authority** ("I checked with my manager and secured a one-time approval…") —
+  the AI may only use this line **after** it has actually been granted a real
+  discount (see next step), so it never lies.
+
+### 14.7 (Optional) Set up the discount ladder
+
+This lets the AI offer **pre-approved** discounts — but only when a customer is
+clearly interested yet hesitating, and **one layer at a time** (never your best
+deal first). You stay in full control of the limits.
+
+1. In the **Discount strategy** card, turn it **on**.
+2. Add **layers** in the order they should be offered, e.g.:
+   1. Free shipping
+   2. 5% off
+   3. 10% off
+3. Set the **hard maximum discount %** — an absolute cap the AI can never exceed,
+   even if it misbehaves.
+4. **Service discount %** — a separate rate for service items (see 14.8).
+5. **Minimum order value** — orders below this don't qualify.
+6. **Offer valid for (minutes)** — makes the urgency real; the discount actually
+   expires.
+7. **One discount per customer** — stops people farming discounts across chats.
+
+> To have the AI **apply** a discount and create the discounted order by itself,
+> it must be in **Autopilot** mode. In Auto-reply it can *mention* a discount but a
+> human finalises the order.
+
+### 14.8 (Optional) Mark which catalog items are services
+
+If you sell services and want the **service discount %** to apply to them:
+
+1. Go to **Commerce → Products**.
+2. On each item, use the **Product / Service** dropdown to label it.
+
+### 14.9 (Optional) Turn on 23-hour re-engagement
+
+This sends **one** friendly, personalised follow-up to people who asked a real
+question and then went quiet — timed just before the 24-hour WhatsApp window
+closes, so it's always allowed.
+
+1. In the **Closing tactics** card, turn on **Auto re-engage at ~23h**.
+2. Set **Min. customer messages to qualify** (1 is fine).
+
+> This relies on the **cron job from step 9**. If the cron isn't running, no
+> follow-ups are sent. It also needs a connected model (step 14.2).
+
+### 14.10 Try it before customers do (Playground)
+
+Scroll to the **Playground** on the same page. Type a message as if you were a
+customer ("do you have blue mugs?", then "hmm, a bit pricey"). The AI replies live
+and shows little chips for any actions it would take (like `offer_discount` or
+`create_order`). **Nothing here is saved or sent to a real customer** — it's a safe
+sandbox. Tune your settings until the replies feel right.
+
+### 14.11 Go live and watch it work
+
+Once you switch to **Auto-reply** or **Autopilot**, real conversations are handled
+automatically. To monitor:
+
+- **Inbox** — chats the AI is handling show an **"AI handling"** badge; if it hands
+  a chat to a human you'll see **"AI handed off"**. In **Suggest** mode, drafts
+  appear as an amber card with **Send** / **Dismiss** buttons.
+- **The AI always backs off the moment a human teammate replies** — so your agents
+  can jump into any chat at any time and the AI won't fight them.
+- **Dashboard** — the **AI assistant** card shows conversations engaged, orders
+  created, close rate, discounts offered, discount spend, and how many re-engaged
+  customers came back and bought.
+
+That's it — the AI is live. Revisit **Settings → AI agent** any time to adjust the
+tone, raise autonomy, or change the discount ladder.
 
 ---
 
