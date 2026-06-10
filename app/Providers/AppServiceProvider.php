@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Ai\LlmManager;
+use App\Ai\NullPaymentLinkGenerator;
+use App\Ai\PaymentLinkGenerator;
 use App\Channels\ChannelManager;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -21,6 +24,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(ChannelManager::class);
+        $this->app->singleton(LlmManager::class);
+        $this->app->bind(PaymentLinkGenerator::class, NullPaymentLinkGenerator::class);
     }
 
     public function boot(): void
