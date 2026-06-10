@@ -32,7 +32,32 @@ class AiAgent extends Model
         'handoff_keywords' => ['human', 'agent', 'representative', 'person', 'refund'],
         'order_total_cap' => null,
         'engage_new_conversations' => true,
+        // High-closure techniques the admin opts into (see App\Ai\Prompts).
+        'closure_techniques' => [],
+        // Pre-approved, layered discounts. The agent reveals layers one at a time
+        // and can never exceed these server-enforced caps (App\Ai\ToolExecutor).
+        'discount' => [
+            'enabled' => false,
+            'layers' => [],            // ordered: [{type: free_shipping|cart_percent|service_percent, value?: float}]
+            'service_percent' => 0,    // pre-approved % for service-type line items
+            'shipping_fee' => 0.0,     // value of a free-shipping concession (for records)
+            'max_percent' => 15,       // hard cap on any percentage discount
+            'min_order_value' => 0.0,  // floor to qualify for any discount
+            'once_per_contact' => true,
+            'offer_ttl_minutes' => 60, // offers expire so urgency stays truthful
+        ],
+        // ~23h in-window automatic re-engagement (App\Console\Commands\SendReengagements).
+        'reengage' => [
+            'enabled' => false,
+            'min_customer_messages' => 1,
+        ],
     ];
+
+    /** Closure techniques an admin may enable; surfaced to the UI and the prompt. */
+    public const CLOSURE_TECHNIQUES = ['fomo', 'scarcity', 'urgency', 'social_proof', 'anchoring', 'assumptive_close', 'authority'];
+
+    /** Discount layer types an admin may configure. */
+    public const DISCOUNT_TYPES = ['free_shipping', 'cart_percent', 'service_percent'];
 
     /** @var list<string> */
     protected $fillable = [
@@ -53,7 +78,15 @@ class AiAgent extends Model
      */
     public function guardConfig(): array
     {
-        return array_merge(self::DEFAULT_GUARDRAILS, $this->guardrails ?? []);
+        $merged = array_merge(self::DEFAULT_GUARDRAILS, $this->guardrails ?? []);
+
+        // Deep-merge the nested config blocks so a partially-stored block keeps
+        // the defaults for any keys the admin didn't set.
+        foreach (['discount', 'reengage'] as $block) {
+            $merged[$block] = array_merge(self::DEFAULT_GUARDRAILS[$block], $this->guardrails[$block] ?? []);
+        }
+
+        return $merged;
     }
 
     /** Resolve the agent for a channel: exact scope match, else the 'all' row. */

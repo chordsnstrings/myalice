@@ -11,6 +11,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $workspace_id
  * @property int|null $contact_id
  * @property string $number
+ * @property numeric-string $subtotal
+ * @property string|null $discount_type
+ * @property numeric-string $discount_amount
+ * @property numeric-string $shipping_amount
  * @property numeric-string $total
  * @property string $currency
  * @property string $status
@@ -23,12 +27,12 @@ class Order extends Model
     use BelongsToWorkspace;
 
     /** @var list<string> */
-    protected $fillable = ['workspace_id', 'contact_id', 'number', 'total', 'currency', 'status', 'source', 'line_items'];
+    protected $fillable = ['workspace_id', 'contact_id', 'number', 'subtotal', 'discount_type', 'discount_amount', 'shipping_amount', 'total', 'currency', 'status', 'source', 'line_items'];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['total' => 'decimal:2', 'line_items' => 'array'];
+        return ['subtotal' => 'decimal:2', 'discount_amount' => 'decimal:2', 'shipping_amount' => 'decimal:2', 'total' => 'decimal:2', 'line_items' => 'array'];
     }
 
     /** @return BelongsTo<Contact, $this> */

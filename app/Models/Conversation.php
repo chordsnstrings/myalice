@@ -24,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $assigned_at
  * @property Carbon|null $resolved_at
  * @property Carbon|null $awaiting_csat_at
+ * @property Carbon|null $reengaged_at
  * @property-read Contact $contact
  */
 class Conversation extends Model
@@ -34,7 +35,7 @@ class Conversation extends Model
     protected $fillable = [
         'workspace_id', 'contact_id', 'channel', 'status', 'assignee_id', 'unread',
         'window_open', 'sla_breaching', 'last_message', 'last_message_at',
-        'first_response_at', 'assigned_at', 'resolved_at', 'awaiting_csat_at', 'ai_status',
+        'first_response_at', 'assigned_at', 'resolved_at', 'awaiting_csat_at', 'ai_status', 'reengaged_at',
     ];
 
     /** @return array<string, string> */
@@ -48,6 +49,7 @@ class Conversation extends Model
             'assigned_at' => 'datetime',
             'resolved_at' => 'datetime',
             'awaiting_csat_at' => 'datetime',
+            'reengaged_at' => 'datetime',
         ];
     }
 

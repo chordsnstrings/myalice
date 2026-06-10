@@ -14,13 +14,14 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $stock
  * @property string|null $image
  * @property string $source
+ * @property string $type
  */
 class Product extends Model
 {
     use BelongsToWorkspace;
 
     /** @var list<string> */
-    protected $fillable = ['workspace_id', 'title', 'price', 'currency', 'stock', 'image', 'source'];
+    protected $fillable = ['workspace_id', 'title', 'price', 'currency', 'stock', 'image', 'source', 'type'];
 
     /** @return array<string, string> */
     protected function casts(): array
