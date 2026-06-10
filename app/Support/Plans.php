@@ -12,7 +12,7 @@ class Plans
     /** Features unlocked at each tier (cumulative). */
     private const TIERS = [
         'premium' => ['broadcasts', 'chatbots', 'hours', 'quick_replies', 'store', 'widget', 'qr', 'routing'],
-        'business' => ['automation', 'catalog', 'nlp', 'custom_chatbot', 'api'],
+        'business' => ['automation', 'catalog', 'nlp', 'custom_chatbot', 'api', 'ai_agents'],
         'enterprise' => ['llm', 'white_label'],
     ];
 

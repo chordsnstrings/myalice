@@ -59,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Plan-based feature gate (§10). Used by the nav lock and feature routes.
         Gate::define('use-automation', fn (User $u) => Plans::includes(optional($u->currentWorkspace)->plan ?? 'premium', 'automation'));
+        Gate::define('use-ai-agents', fn (User $u) => Plans::includes(optional($u->currentWorkspace)->plan ?? 'premium', 'ai_agents'));
 
         // Lifecycle capture for analytics (first-response / resolution / assignment).
         Conversation::observe(ConversationObserver::class);

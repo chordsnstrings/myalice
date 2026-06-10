@@ -34,7 +34,7 @@ class Conversation extends Model
     protected $fillable = [
         'workspace_id', 'contact_id', 'channel', 'status', 'assignee_id', 'unread',
         'window_open', 'sla_breaching', 'last_message', 'last_message_at',
-        'first_response_at', 'assigned_at', 'resolved_at', 'awaiting_csat_at',
+        'first_response_at', 'assigned_at', 'resolved_at', 'awaiting_csat_at', 'ai_status',
     ];
 
     /** @return array<string, string> */
