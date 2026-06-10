@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\StoreConnection;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -40,12 +42,22 @@ class CommerceController extends Controller
             'currency' => $p->currency,
             'stock' => $p->stock,
             'source' => $p->source,
+            'type' => $p->type,
         ]);
 
         return Inertia::render('Commerce/Products', [
             'products' => $products,
             'store' => $this->store(),
         ]);
+    }
+
+    /** Mark a catalog item as a product or a service (drives the AI's service discount). */
+    public function updateProductType(Request $request, Product $product): RedirectResponse
+    {
+        $data = $request->validate(['type' => ['required', 'in:product,service']]);
+        $product->update(['type' => $data['type']]);
+
+        return back()->with('success', 'Catalog item updated.');
     }
 
     /** @return array{platform: string, store_url: string, last_synced_at: string|null}|null */

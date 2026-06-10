@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Send, AlertTriangle } from 'lucide-react';
 import { AppShell } from '@/components/shell/AppShell';
 import { Page } from '@/components/shell/Page';
@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { money } from '@/lib/utils';
+import type { PageProps } from '@/types';
 
 interface Product {
     id: number;
@@ -14,9 +15,15 @@ interface Product {
     currency: string;
     stock: number;
     source: string;
+    type: string;
 }
 
 export default function Products({ products, store }: { products: Product[]; store: { platform: string; last_synced_at: string | null } | null }) {
+    const canManage = !!usePage<PageProps>().props.auth.can?.manage_bots;
+
+    const setType = (id: number, type: string) =>
+        router.patch(`/products/${id}/type`, { type }, { preserveScroll: true, preserveState: false });
+
     return (
         <AppShell title="Commerce">
             <Head title="Products" />
@@ -40,7 +47,18 @@ export default function Products({ products, store }: { products: Product[]; sto
                                     <span className="text-[12px] text-tertiary tnum">{p.stock} in stock</span>
                                 )}
                             </div>
-                            <Button variant="secondary" size="sm" className="mt-3 w-full" disabled={p.stock === 0}>
+                            {canManage && (
+                                <select
+                                    className="mt-3 h-8 w-full rounded-[var(--radius-control)] border border-strong bg-surface px-2 text-[12px] text-secondary focus:border-accent focus-visible:outline-none"
+                                    value={p.type}
+                                    onChange={(e) => setType(p.id, e.target.value)}
+                                    title="Used by the AI for the pre-approved service discount"
+                                >
+                                    <option value="product">Physical product</option>
+                                    <option value="service">Service</option>
+                                </select>
+                            )}
+                            <Button variant="secondary" size="sm" className="mt-2 w-full" disabled={p.stock === 0}>
                                 <Send className="size-3.5" /> Send to chat
                             </Button>
                         </Card>

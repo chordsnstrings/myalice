@@ -81,6 +81,7 @@ Route::middleware(['auth', 'workspace'])->group(function () {
     // Commerce
     Route::get('/orders', [CommerceController::class, 'orders'])->name('orders');
     Route::get('/products', [CommerceController::class, 'products'])->name('products');
+    Route::patch('/products/{product}/type', [CommerceController::class, 'updateProductType'])->middleware('can:manage-bots')->name('products.type');
 
     // Settings cluster
     Route::get('/settings', [SettingsController::class, 'workspace'])->name('settings');

@@ -16,6 +16,7 @@ use App\Support\Tenancy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -164,6 +165,25 @@ class AiAgentController extends Controller
             'guardrails.engage_new_conversations' => ['boolean'],
             'guardrails.handoff_keywords' => ['array'],
             'guardrails.handoff_keywords.*' => ['string'],
+            // High-closure techniques
+            'guardrails.closure_techniques' => ['array'],
+            'guardrails.closure_techniques.*' => ['string', Rule::in(AiAgent::CLOSURE_TECHNIQUES)],
+            // Layered pre-approved discounts
+            'guardrails.discount' => ['array'],
+            'guardrails.discount.enabled' => ['boolean'],
+            'guardrails.discount.layers' => ['array', 'max:6'],
+            'guardrails.discount.layers.*.type' => ['required', Rule::in(AiAgent::DISCOUNT_TYPES)],
+            'guardrails.discount.layers.*.value' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'guardrails.discount.service_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'guardrails.discount.shipping_fee' => ['nullable', 'numeric', 'min:0'],
+            'guardrails.discount.max_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'guardrails.discount.min_order_value' => ['nullable', 'numeric', 'min:0'],
+            'guardrails.discount.once_per_contact' => ['boolean'],
+            'guardrails.discount.offer_ttl_minutes' => ['nullable', 'integer', 'min:5', 'max:10080'],
+            // ~23h re-engagement
+            'guardrails.reengage' => ['array'],
+            'guardrails.reengage.enabled' => ['boolean'],
+            'guardrails.reengage.min_customer_messages' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 
         AiAgent::updateOrCreate(

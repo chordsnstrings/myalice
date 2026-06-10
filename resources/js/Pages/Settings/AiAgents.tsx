@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Check, Lock, Send, Sparkles, Star, Trash2 } from 'lucide-react';
+import { Check, Lock, Plus, Send, Sparkles, Star, Trash2 } from 'lucide-react';
 import { SettingsLayout } from '@/components/settings/SettingsLayout';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -35,11 +35,35 @@ interface Opt {
     description?: string;
 }
 
+interface DiscountLayer {
+    type: string;
+    value?: number | null;
+}
+
+interface DiscountConfig {
+    enabled: boolean;
+    layers: DiscountLayer[];
+    service_percent: number;
+    shipping_fee: number;
+    max_percent: number;
+    min_order_value: number;
+    once_per_contact: boolean;
+    offer_ttl_minutes: number;
+}
+
+interface ReengageConfig {
+    enabled: boolean;
+    min_customer_messages: number;
+}
+
 interface Guardrails {
     max_messages_per_conversation: number;
     order_total_cap: number | null;
     engage_new_conversations: boolean;
     handoff_keywords: string[];
+    closure_techniques: string[];
+    discount: DiscountConfig;
+    reengage: ReengageConfig;
 }
 
 interface AgentProfile {
@@ -60,6 +84,8 @@ interface Meta {
     methodologies: Opt[];
     goals: Opt[];
     modes: Opt[];
+    closure_techniques: Opt[];
+    discount_types: Opt[];
 }
 
 interface Props {
@@ -283,11 +309,31 @@ function AgentForm({
             order_total_cap: agent.guardrails.order_total_cap,
             engage_new_conversations: agent.guardrails.engage_new_conversations,
             handoff_keywords: agent.guardrails.handoff_keywords,
+            closure_techniques: agent.guardrails.closure_techniques ?? [],
+            discount: agent.guardrails.discount,
+            reengage: agent.guardrails.reengage,
         },
     });
 
     const setGuard = <K extends keyof Guardrails>(key: K, value: Guardrails[K]) =>
         setData('guardrails', { ...data.guardrails, [key]: value });
+
+    const setDiscount = <K extends keyof DiscountConfig>(key: K, value: DiscountConfig[K]) =>
+        setData('guardrails', { ...data.guardrails, discount: { ...data.guardrails.discount, [key]: value } });
+
+    const toggleTechnique = (value: string, on: boolean) =>
+        setGuard('closure_techniques', on
+            ? [...data.guardrails.closure_techniques, value]
+            : data.guardrails.closure_techniques.filter((t) => t !== value));
+
+    const setLayer = (i: number, patch: Partial<DiscountLayer>) =>
+        setDiscount('layers', data.guardrails.discount.layers.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+
+    const addLayer = () =>
+        setDiscount('layers', [...data.guardrails.discount.layers, { type: 'cart_percent', value: 5 }]);
+
+    const removeLayer = (i: number) =>
+        setDiscount('layers', data.guardrails.discount.layers.filter((_, idx) => idx !== i));
 
     const submit = () =>
         put('/settings/ai-agents/agent', {
@@ -451,6 +497,123 @@ function AgentForm({
                             }
                         />
                     </div>
+                </div>
+
+                {/* Closing tactics + re-engagement */}
+                <div className="rounded-[var(--radius-card)] border border-default bg-canvas p-4">
+                    <p className="mb-1 text-[12px] font-semibold uppercase tracking-wide text-tertiary">Closing tactics</p>
+                    <p className="mb-3 text-[12px] text-tertiary">
+                        Persuasion techniques the AI may use. All are kept truthful — scarcity needs real low stock,
+                        urgency needs a real deadline.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        {meta.closure_techniques.map((t) => {
+                            const on = data.guardrails.closure_techniques.includes(t.value);
+                            return (
+                                <label key={t.value} className="flex cursor-pointer items-center gap-2 rounded-[var(--radius-control)] border border-default px-2.5 py-1.5 hover:bg-surface-hover">
+                                    <input type="checkbox" className="accent-[var(--color-accent)]" checked={on} onChange={(e) => toggleTechnique(t.value, e.target.checked)} />
+                                    <span className="text-[12px]">{t.label}</span>
+                                </label>
+                            );
+                        })}
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between border-t border-default pt-4">
+                        <div>
+                            <p className="text-[13px] font-medium">Auto re-engage at ~23h</p>
+                            <p className="text-[12px] text-tertiary">One tailored follow-up before the 24h window closes, for chats that went quiet.</p>
+                        </div>
+                        <Switch
+                            checked={data.guardrails.reengage.enabled}
+                            onChange={(v) => setData('guardrails', { ...data.guardrails, reengage: { ...data.guardrails.reengage, enabled: v } })}
+                        />
+                    </div>
+                    {data.guardrails.reengage.enabled && (
+                        <div className="mt-3">
+                            <Input
+                                label="Min. customer messages to qualify"
+                                type="number"
+                                min={1}
+                                value={String(data.guardrails.reengage.min_customer_messages)}
+                                onChange={(e) => setData('guardrails', { ...data.guardrails, reengage: { ...data.guardrails.reengage, min_customer_messages: Number(e.target.value) } })}
+                            />
+                        </div>
+                    )}
+                </div>
+
+                {/* Layered pre-approved discounts */}
+                <div className="rounded-[var(--radius-card)] border border-default bg-canvas p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-[12px] font-semibold uppercase tracking-wide text-tertiary">Discount strategy</p>
+                            <p className="mt-1 text-[12px] text-tertiary">Pre-approved offers the AI reveals one layer at a time when it senses hesitation. It can never exceed these caps.</p>
+                        </div>
+                        <Switch checked={data.guardrails.discount.enabled} onChange={(v) => setDiscount('enabled', v)} />
+                    </div>
+
+                    {data.guardrails.discount.enabled && (
+                        <div className="mt-4 space-y-4">
+                            <div>
+                                <p className="mb-1.5 text-[13px] font-medium">Layers (revealed in order)</p>
+                                <div className="space-y-2">
+                                    {data.guardrails.discount.layers.map((layer, i) => (
+                                        <div key={i} className="flex items-center gap-2">
+                                            <span className="w-5 text-[12px] text-tertiary">{i + 1}.</span>
+                                            <select
+                                                className={selectClass + ' flex-1'}
+                                                value={layer.type}
+                                                onChange={(e) => setLayer(i, { type: e.target.value })}
+                                            >
+                                                {meta.discount_types.map((d) => (
+                                                    <option key={d.value} value={d.value}>{d.label}</option>
+                                                ))}
+                                            </select>
+                                            {layer.type === 'cart_percent' && (
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    max={100}
+                                                    className="h-9 w-20 rounded-[var(--radius-control)] border border-strong bg-surface px-2 text-sm"
+                                                    placeholder="%"
+                                                    value={layer.value ?? ''}
+                                                    onChange={(e) => setLayer(i, { value: e.target.value === '' ? null : Number(e.target.value) })}
+                                                />
+                                            )}
+                                            <Button size="sm" variant="ghost" onClick={() => removeLayer(i)} title="Remove">
+                                                <Trash2 className="size-4 text-danger" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <Button size="sm" variant="secondary" className="mt-2" onClick={addLayer}>
+                                    <Plus className="size-3.5" /> Add layer
+                                </Button>
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <Input label="Service discount (%)" type="number" min={0} max={100}
+                                    value={String(data.guardrails.discount.service_percent)}
+                                    onChange={(e) => setDiscount('service_percent', Number(e.target.value))} />
+                                <Input label="Hard max discount (%)" hint="Caps every percentage layer." type="number" min={0} max={100}
+                                    value={String(data.guardrails.discount.max_percent)}
+                                    onChange={(e) => setDiscount('max_percent', Number(e.target.value))} />
+                                <Input label="Min. order value to qualify" type="number" min={0}
+                                    value={String(data.guardrails.discount.min_order_value)}
+                                    onChange={(e) => setDiscount('min_order_value', Number(e.target.value))} />
+                                <Input label="Offer valid for (minutes)" hint="Makes the urgency real." type="number" min={5}
+                                    value={String(data.guardrails.discount.offer_ttl_minutes)}
+                                    onChange={(e) => setDiscount('offer_ttl_minutes', Number(e.target.value))} />
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-[13px] font-medium">One discount per customer</p>
+                                    <p className="text-[12px] text-tertiary">Don't start a fresh discount ladder in a new chat with the same person.</p>
+                                </div>
+                                <Switch checked={data.guardrails.discount.once_per_contact} onChange={(v) => setDiscount('once_per_contact', v)} />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex justify-end">

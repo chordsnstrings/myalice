@@ -5,6 +5,7 @@ use App\Models\AiProvider;
 use App\Models\Contact;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\Product;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\Tenancy;
@@ -103,6 +104,55 @@ it('updates the agent profile', function () {
     expect($agent->name)->toBe('Ava');
     expect($agent->mode)->toBe('autopilot');
     expect($agent->goal)->toBe('lead');
+    Tenancy::clear();
+});
+
+it('saves discount layers, closure techniques and re-engagement config', function () {
+    $user = aiOwner();
+
+    $this->actingAs($user)->put('/settings/ai-agents/agent', [
+        'name' => 'Ava', 'enabled' => true, 'mode' => 'autopilot', 'goal' => 'sale',
+        'tone' => 'friendly', 'methodology' => 'direct_closer',
+        'guardrails' => [
+            'closure_techniques' => ['fomo', 'authority'],
+            'discount' => [
+                'enabled' => true,
+                'layers' => [['type' => 'free_shipping'], ['type' => 'cart_percent', 'value' => 10]],
+                'max_percent' => 20,
+            ],
+            'reengage' => ['enabled' => true, 'min_customer_messages' => 2],
+        ],
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    Tenancy::set($user->currentWorkspace);
+    $cfg = AiAgent::resolveFor('all')->guardConfig();
+    expect($cfg['closure_techniques'])->toContain('fomo', 'authority');
+    expect($cfg['discount']['enabled'])->toBeTrue();
+    expect($cfg['discount']['layers'])->toHaveCount(2);
+    expect($cfg['reengage']['enabled'])->toBeTrue();
+    Tenancy::clear();
+});
+
+it('rejects an unknown closure technique or discount type', function () {
+    $user = aiOwner();
+
+    $this->actingAs($user)->put('/settings/ai-agents/agent', [
+        'name' => 'Ava', 'enabled' => true, 'mode' => 'auto', 'goal' => 'sale',
+        'tone' => 'friendly', 'methodology' => 'direct_closer',
+        'guardrails' => ['closure_techniques' => ['mind_control']],
+    ])->assertSessionHasErrors('guardrails.closure_techniques.0');
+});
+
+it('lets an admin set a catalog item as a service', function () {
+    $user = aiOwner();
+    Tenancy::set($user->currentWorkspace);
+    $p = Product::create(['workspace_id' => $user->workspace_id, 'title' => 'Setup', 'price' => 50, 'currency' => 'USD', 'stock' => 1]);
+    Tenancy::clear();
+
+    $this->actingAs($user)->patch("/products/{$p->id}/type", ['type' => 'service'])->assertRedirect();
+
+    Tenancy::set($user->currentWorkspace);
+    expect($p->fresh()->type)->toBe('service');
     Tenancy::clear();
 });
 
