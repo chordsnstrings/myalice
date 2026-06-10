@@ -273,10 +273,10 @@ class AnalyticsService
     }
 
     /**
-     * AI sales-agent performance: action counts and the deal-close rate across
-     * conversations the AI engaged.
+     * AI sales-agent performance: action counts, deal-close rate, discount spend
+     * and re-engagement recovery across conversations the AI engaged.
      *
-     * @return array{engaged:int, replies:int, drafts:int, leads:int, orders:int, handoffs:int, errors:int, conversion_rate:float}
+     * @return array{engaged:int, replies:int, drafts:int, leads:int, orders:int, handoffs:int, errors:int, conversion_rate:float, offers_made:int, discounted_orders:int, discount_total:float, reengagements_sent:int, reengagement_recovery:float}
      */
     public function aiPerformance(AnalyticsFilters $f): array
     {
@@ -292,6 +292,16 @@ class AnalyticsService
                 ->count('conversation_id');
 
             $orders = (int) ($counts['create_order'] ?? 0);
+            $reengagements = (int) ($counts['reengage'] ?? 0);
+
+            // Discount spend on chat orders in range.
+            $discountTotal = (float) $this->chatOrders($f)->sum('discount_amount');
+            $discountedOrders = (int) $this->chatOrders($f)->where('discount_amount', '>', 0)->count();
+
+            // Orders whose conversation received a re-engagement nudge → recovery.
+            $reengagedConvIds = $this->aiActions($f)->where('type', 'reengage')->distinct()->pluck('conversation_id');
+            $orderedConvIds = $this->aiActions($f)->where('type', 'create_order')->distinct()->pluck('conversation_id');
+            $recovered = $reengagedConvIds->intersect($orderedConvIds)->count();
 
             return [
                 'engaged' => $engaged,
@@ -302,6 +312,11 @@ class AnalyticsService
                 'handoffs' => (int) ($counts['handoff'] ?? 0),
                 'errors' => (int) ($counts['error'] ?? 0),
                 'conversion_rate' => $engaged > 0 ? round($orders / $engaged * 100, 1) : 0.0,
+                'offers_made' => (int) ($counts['offer_discount'] ?? 0),
+                'discounted_orders' => $discountedOrders,
+                'discount_total' => round($discountTotal, 2),
+                'reengagements_sent' => $reengagements,
+                'reengagement_recovery' => $reengagements > 0 ? round($recovered / $reengagements * 100, 1) : 0.0,
             ];
         });
     }

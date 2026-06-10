@@ -57,10 +57,13 @@ self-hosted base URL); confirm your egress/firewall policy permits them.
 11. The scheduler (`routes/console.php`) already runs:
     `queue:work --stop-when-empty --tries=3 --max-time=50` (`->everyMinute()->withoutOverlapping()`),
     `analytics:snapshot` (`->dailyAt('00:20')`, analytics trend rollups),
+    `ai:reengage` (`->hourly()->withoutOverlapping()`, ~23h in-window AI re-engagement),
     plus daily housekeeping (prune batches, clear resets, prune Sanctum tokens).
-    The **AI reply job** (`GenerateAiReply`) rides this same queue — no extra
-    scheduler entry or daemon. Its 35s wall-clock guard fits inside `--max-time=50`,
-    and `tries=1` ensures a retry can never double-message a customer.
+    The **AI reply job** (`GenerateAiReply`) and **re-engagement job**
+    (`SendAiReengagement`) ride this same queue — no extra daemon. The reply
+    loop's 35s wall-clock guard fits inside `--max-time=50`, and `tries=1` ensures
+    a retry can never double-message a customer. `ai:reengage` only does cheap SQL
+    filtering before queuing work, so it's safe on shared CPU.
 12. Verify PHP `max_execution_time` is `0` or `>60`.
 
 ## F. TLS, verify, operate

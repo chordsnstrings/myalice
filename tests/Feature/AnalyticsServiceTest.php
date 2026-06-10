@@ -5,6 +5,7 @@ use App\Models\AiAgent;
 use App\Models\Contact;
 use App\Models\Conversation;
 use App\Models\CsatRating;
+use App\Models\Order;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\AnalyticsService;
@@ -140,4 +141,32 @@ it('aggregates AI performance and close rate', function () {
     expect($ai['orders'])->toBe(1);
     expect($ai['handoffs'])->toBe(1);
     expect($ai['conversion_rate'])->toBe(50.0); // 1 order / 2 engaged
+});
+
+it('aggregates AI discount spend and re-engagement recovery', function () {
+    $ws = Workspace::create(['name' => 'AID']);
+    Tenancy::set($ws);
+    $contact = Contact::create(['name' => 'C', 'phone' => '+1'])->id;
+    $c1 = makeConv($ws, $contact, null, ['created_at' => now()]);
+    $agent = AiAgent::create([
+        'workspace_id' => $ws->id, 'name' => 'A', 'enabled' => true, 'mode' => 'autopilot',
+        'goal' => 'sale', 'channel_scope' => 'all', 'tone' => 'friendly', 'methodology' => 'direct_closer',
+    ]);
+    $log = fn (int $conv, string $type) => AiAction::create([
+        'workspace_id' => $ws->id, 'conversation_id' => $conv, 'ai_agent_id' => $agent->id,
+        'type' => $type, 'payload' => [], 'status' => 'ok', 'created_at' => now(),
+    ]);
+
+    $log($c1->id, 'reengage');
+    $log($c1->id, 'offer_discount');
+    $log($c1->id, 'create_order'); // re-engaged conversation that then bought
+    Order::create(['workspace_id' => $ws->id, 'contact_id' => $contact, 'number' => 'AI-1', 'subtotal' => 100, 'discount_amount' => 15, 'total' => 85, 'currency' => 'USD', 'status' => 'pending', 'source' => 'chat']);
+
+    $ai = app(AnalyticsService::class)->aiPerformance(filters());
+
+    expect($ai['offers_made'])->toBe(1);
+    expect($ai['discounted_orders'])->toBe(1);
+    expect($ai['discount_total'])->toBe(15.0);
+    expect($ai['reengagements_sent'])->toBe(1);
+    expect($ai['reengagement_recovery'])->toBe(100.0); // 1 reengaged convo bought / 1 sent
 });

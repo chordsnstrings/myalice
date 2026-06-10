@@ -31,6 +31,11 @@ interface AiPerformance {
     handoffs: number;
     errors: number;
     conversion_rate: number;
+    offers_made: number;
+    discounted_orders: number;
+    discount_total: number;
+    reengagements_sent: number;
+    reengagement_recovery: number;
 }
 interface Props {
     kpis: Kpi[];
@@ -171,11 +176,11 @@ export default function Dashboard({ kpis, revenueTrend, leaderboard, recovered, 
                             </div>
                             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
                                 <AiStat label="Conversations engaged" value={ai.engaged} />
-                                <AiStat label="Replies sent" value={ai.replies} />
-                                <AiStat label="Leads captured" value={ai.leads} />
                                 <AiStat label="Orders created" value={ai.orders} />
-                                <AiStat label="Handoffs" value={ai.handoffs} />
                                 <AiStat label="Close rate" value={`${ai.conversion_rate}%`} accent />
+                                <AiStat label="Discounts offered" value={ai.offers_made} />
+                                <AiStat label="Discount spend" value={money(ai.discount_total)} />
+                                <AiStat label="Re-engaged → bought" value={`${ai.reengagement_recovery}%`} accent />
                             </div>
                         </Card>
                     )}
