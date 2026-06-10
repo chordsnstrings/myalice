@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Chatbot;
 use App\Models\User;
 use App\Models\Workspace;
 
@@ -38,6 +39,35 @@ it('lets a developer reach the developer settings', function () {
     $this->actingAs(userWithRole('developer'))
         ->get('/settings/developer')
         ->assertOk();
+});
+
+it('blocks an agent from creating a broadcast (wallet spend)', function () {
+    $agent = userWithRole('agent');
+    $this->actingAs($agent)->get('/broadcasts/create')->assertForbidden();
+    $this->actingAs($agent)->post('/broadcasts', [
+        'name' => 'X', 'recipients' => 1, 'credit_cost' => 0.1,
+    ])->assertForbidden();
+});
+
+it('lets a manager open the broadcast composer', function () {
+    $this->actingAs(userWithRole('manager'))->get('/broadcasts/create')->assertOk();
+});
+
+it('blocks an agent from editing or publishing chatbots', function () {
+    $agent = userWithRole('agent');
+    $bot = Chatbot::create(['workspace_id' => $agent->workspace_id, 'name' => 'B', 'status' => 'draft', 'graph' => ['nodes' => []]]);
+    $this->actingAs($agent)->get("/chatbots/{$bot->id}/edit")->assertForbidden();
+    $this->actingAs($agent)->post("/chatbots/{$bot->id}/publish")->assertForbidden();
+});
+
+it('restricts team and channel settings to managers', function () {
+    $agent = userWithRole('agent');
+    $this->actingAs($agent)->get('/settings/team')->assertForbidden();
+    $this->actingAs($agent)->get('/settings/channels')->assertForbidden();
+
+    $manager = userWithRole('manager');
+    $this->actingAs($manager)->get('/settings/team')->assertOk();
+    $this->actingAs($manager)->get('/settings/channels')->assertOk();
 });
 
 it('shares role capabilities to the front end', function () {

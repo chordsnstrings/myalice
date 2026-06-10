@@ -61,6 +61,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-channels', fn (User $u) => in_array($u->workspace_role, ['owner', 'manager'], true));
         Gate::define('manage-bots', fn (User $u) => in_array($u->workspace_role, ['owner', 'manager'], true));
         Gate::define('manage-api', fn (User $u) => in_array($u->workspace_role, ['owner', 'developer'], true));
+        // Broadcasts cost wallet credits — owner/manager only (spec §4.3 broadcasts.create).
+        Gate::define('create-broadcasts', fn (User $u) => in_array($u->workspace_role, ['owner', 'manager'], true));
 
         // Plan-based feature gate (§10). Used by the nav lock and feature routes.
         Gate::define('use-automation', fn (User $u) => Plans::includes(optional($u->currentWorkspace)->plan ?? 'premium', 'automation'));

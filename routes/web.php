@@ -64,15 +64,19 @@ Route::middleware(['auth', 'workspace'])->group(function () {
     Route::post('/contacts/import', [ContactController::class, 'import'])->name('contacts.import');
     Route::get('/contacts/{contact}', [ContactController::class, 'show'])->name('contacts.show');
 
-    // Chatbots
+    // Chatbots — building/publishing flows are bot management (owner/manager).
     Route::get('/chatbots', [ChatbotController::class, 'index'])->name('chatbots');
-    Route::get('/chatbots/{chatbot}/edit', [ChatbotController::class, 'edit'])->name('chatbots.edit');
-    Route::post('/chatbots/{chatbot}/publish', [ChatbotController::class, 'publish'])->name('chatbots.publish');
+    Route::middleware('can:manage-bots')->group(function () {
+        Route::get('/chatbots/{chatbot}/edit', [ChatbotController::class, 'edit'])->name('chatbots.edit');
+        Route::post('/chatbots/{chatbot}/publish', [ChatbotController::class, 'publish'])->name('chatbots.publish');
+    });
 
-    // Broadcasts & templates
+    // Broadcasts & templates — creating a broadcast spends wallet credits.
     Route::get('/broadcasts', [BroadcastController::class, 'index'])->name('broadcasts');
-    Route::get('/broadcasts/create', [BroadcastController::class, 'create'])->name('broadcasts.create');
-    Route::post('/broadcasts', [BroadcastController::class, 'store'])->name('broadcasts.store');
+    Route::middleware('can:create-broadcasts')->group(function () {
+        Route::get('/broadcasts/create', [BroadcastController::class, 'create'])->name('broadcasts.create');
+        Route::post('/broadcasts', [BroadcastController::class, 'store'])->name('broadcasts.store');
+    });
     Route::get('/templates', [TemplateController::class, 'index'])->name('templates');
 
     // Automations
@@ -85,10 +89,11 @@ Route::middleware(['auth', 'workspace'])->group(function () {
 
     // Settings cluster
     Route::get('/settings', [SettingsController::class, 'workspace'])->name('settings');
-    Route::get('/settings/team', [SettingsController::class, 'team'])->name('settings.team');
+    Route::get('/settings/team', [SettingsController::class, 'team'])->middleware('can:manage-team')->name('settings.team');
     Route::get('/settings/content', [SettingsController::class, 'content'])->name('settings.content');
     Route::get('/settings/hours', [SettingsController::class, 'hours'])->name('settings.hours');
-    Route::get('/settings/channels', [SettingsController::class, 'channels'])->name('settings.channels');
+    // Channel config exposes webhook verify tokens — restrict to channel managers.
+    Route::get('/settings/channels', [SettingsController::class, 'channels'])->middleware('can:manage-channels')->name('settings.channels');
     Route::middleware('can:manage-channels')->group(function () {
         Route::post('/settings/channels/{type}/connect', [ChannelConnectionController::class, 'connect'])->name('channels.connect');
         Route::post('/settings/channels/{type}/embedded', [ChannelConnectionController::class, 'embedded'])->name('channels.embedded');
