@@ -51,6 +51,7 @@ export interface Conversation {
     assignee?: { id: number; name: string } | null;
     sla_breaching?: boolean;
     window_open?: boolean;
+    ai_status?: 'active' | 'handed_off' | 'suppressed' | null;
 }
 
 export interface Message {
@@ -59,5 +60,5 @@ export interface Message {
     author: 'customer' | 'agent' | 'bot' | 'system';
     body: string;
     sent_at: string;
-    status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed' | 'queued';
+    status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed' | 'queued' | 'draft';
 }

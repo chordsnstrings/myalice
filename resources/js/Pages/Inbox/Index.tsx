@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { createPortal } from 'react-dom';
 import {
     Search,
@@ -21,6 +21,8 @@ import {
     Lock,
     ArrowLeft,
     Info,
+    Sparkles,
+    Trash2,
     X,
 } from 'lucide-react';
 import { AppShell } from '@/components/shell/AppShell';
@@ -117,6 +119,27 @@ export default function InboxIndex({ conversations, messages: seed }: Props) {
                 [selectedId]: (t[selectedId] ?? []).map((m) => (m.id === optimistic.id ? { ...m, status: 'delivered' } : m)),
             }));
         }, 900);
+    };
+
+    const sendAiDraft = (cid: number, mid: number) => {
+        setThreads((t) => ({
+            ...t,
+            [cid]: (t[cid] ?? []).map((m) => (m.id === mid ? { ...m, status: 'sent' } : m)),
+        }));
+        router.post(`/inbox/ai-drafts/${mid}/send`, {}, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => toast('AI draft sent', { tone: 'success' }),
+        });
+    };
+
+    const dismissAiDraft = (cid: number, mid: number) => {
+        setThreads((t) => ({ ...t, [cid]: (t[cid] ?? []).filter((m) => m.id !== mid) }));
+        router.delete(`/inbox/ai-drafts/${mid}`, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => toast('AI draft dismissed', { tone: 'info' }),
+        });
     };
 
     return (
@@ -227,6 +250,16 @@ export default function InboxIndex({ conversations, messages: seed }: Props) {
                                     </div>
                                 </div>
                                 <div className="ms-auto flex items-center gap-1">
+                                    {selected.ai_status === 'active' && (
+                                        <Badge tone="accent" className="hidden gap-1 sm:inline-flex">
+                                            <Sparkles className="size-3" /> AI handling
+                                        </Badge>
+                                    )}
+                                    {selected.ai_status === 'handed_off' && (
+                                        <Badge tone="warning" className="hidden sm:inline-flex">
+                                            AI handed off
+                                        </Badge>
+                                    )}
                                     <Badge tone={selected.status === 'open' ? 'accent' : 'neutral'} className="hidden sm:inline-flex">
                                         {selected.status}
                                     </Badge>
@@ -258,6 +291,23 @@ export default function InboxIndex({ conversations, messages: seed }: Props) {
                                     m.author === 'system' ? (
                                         <div key={m.id} className="flex justify-center">
                                             <span className="rounded-full bg-surface-2 px-3 py-1 text-[12px] text-tertiary">{m.body}</span>
+                                        </div>
+                                    ) : m.author === 'bot' && m.status === 'draft' ? (
+                                        <div key={m.id} className="flex justify-end">
+                                            <div className="max-w-[82%] rounded-[var(--radius-card)] border border-warning/40 bg-warning-subtle px-3.5 py-2.5 text-[13px] sm:max-w-[68%]">
+                                                <span className="mb-1 flex items-center gap-1 text-[11px] font-medium text-warning">
+                                                    <Sparkles className="size-3" /> AI draft — review before sending
+                                                </span>
+                                                <p className="text-primary">{m.body}</p>
+                                                <div className="mt-2 flex items-center gap-2">
+                                                    <Button size="sm" onClick={() => sendAiDraft(selected.id, m.id)}>
+                                                        <Send className="size-3.5" /> Send
+                                                    </Button>
+                                                    <Button size="sm" variant="ghost" onClick={() => dismissAiDraft(selected.id, m.id)}>
+                                                        <Trash2 className="size-3.5" /> Dismiss
+                                                    </Button>
+                                                </div>
+                                            </div>
                                         </div>
                                     ) : (
                                         <div key={m.id} className={cn('flex animate-bubble', m.direction === 'out' ? 'justify-end' : 'justify-start')}>

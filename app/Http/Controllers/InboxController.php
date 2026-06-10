@@ -34,6 +34,7 @@ class InboxController extends Controller
                 'assignee' => $c->assignee_id ? ['id' => $c->assignee_id, 'name' => 'You'] : null,
                 'sla_breaching' => $c->sla_breaching,
                 'window_open' => $c->window_open,
+                'ai_status' => $c->ai_status,
             ])->values();
 
         $messages = Message::orderBy('sent_at')
