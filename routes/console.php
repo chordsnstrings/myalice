@@ -18,6 +18,9 @@ Schedule::command('queue:work --stop-when-empty --tries=3 --max-time=50')
 // Nightly analytics rollup for finalized days (trend backing).
 Schedule::command('analytics:snapshot')->dailyAt('00:20')->withoutOverlapping();
 
+// Hourly ~23h in-window AI re-engagement for stalled, customer-started chats.
+Schedule::command('ai:reengage')->hourly()->withoutOverlapping();
+
 // Housekeeping kept light to respect shared-CPU limits.
 Schedule::command('queue:prune-batches --hours=48')->daily();
 Schedule::command('auth:clear-resets')->daily();

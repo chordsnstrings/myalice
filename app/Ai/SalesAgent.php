@@ -11,6 +11,7 @@ use App\Models\Contact;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Support\Tenancy;
+use Illuminate\Support\Str;
 
 /**
  * The autonomous sales agent: assembles context, runs the LLM tool loop, and
@@ -52,6 +53,57 @@ class SalesAgent
         $agent->mode === 'suggest'
             ? $this->emitDraft($agent, $conversation, $text)
             : $this->emitReply($agent, $conversation, $contact, $text, $usage, $provider, $model, $handedOff);
+    }
+
+    /**
+     * ~23h re-engagement: craft ONE chat-specific follow-up that references the
+     * customer's original question and nudges toward the close before the 24h
+     * window shuts. Always sends (never a draft) — eligibility is gated upstream.
+     */
+    public function reengage(AiAgent $agent, Conversation $conversation): void
+    {
+        $workspace = Tenancy::currentOrFail();
+        $contact = $conversation->contact;
+
+        $firstInbound = $conversation->messages()
+            ->where('direction', 'in')->where('author', 'customer')->orderBy('sent_at')->first();
+        $topic = $firstInbound ? trim($firstInbound->body) : 'their earlier question';
+
+        $messages = [['role' => 'system', 'content' => Prompts::system($agent, $workspace, $contact, $conversation)]];
+        foreach ($this->history($conversation) as $m) {
+            $messages[] = $m;
+        }
+        $messages[] = ['role' => 'user', 'content' => $this->reengageDirective($topic, $agent)];
+
+        try {
+            [$text, $usage, $provider, $model, $handedOff] = $this->loop($agent, $conversation, $messages, $this->tools->definitions($agent));
+        } catch (\Throwable $e) {
+            $this->log($agent, $conversation, 'error', ['message' => $e->getMessage(), 'context' => 'reengage'], 'failed');
+
+            return;
+        }
+
+        if (trim($text) === '') {
+            return;
+        }
+
+        $this->emitReply($agent, $conversation, $contact, $text, $usage, $provider, $model, $handedOff);
+        $this->log($agent, $conversation, 'reengage', ['provider' => $provider, 'topic' => Str::limit($topic, 120)]);
+    }
+
+    private function reengageDirective(string $topic, AiAgent $agent): string
+    {
+        $directive = '[INTERNAL RE-ENGAGEMENT INSTRUCTION — this is not from the customer] '
+            .'This customer reached out about: "'.Str::limit($topic, 200).'" and then went quiet about a day ago. '
+            .'The 24-hour messaging window is about to close. Send ONE short, warm, specific follow-up that references '
+            .'their actual question, adds a little value, and moves toward the close with genuine, truthful urgency about '
+            .'the closing window or real stock. Never say or imply this message is automated.';
+
+        if ($agent->guardConfig()['discount']['enabled'] ?? false) {
+            $directive .= ' If their hesitation seemed to be about price, you may call offer_discount for the first layer as the hook.';
+        }
+
+        return $directive;
     }
 
     /**
