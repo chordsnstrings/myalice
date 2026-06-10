@@ -102,6 +102,10 @@ class ProcessInboundMessage implements ShouldQueue
             'last_message_at' => now(),
         ]);
 
+        // Let the AI agent consider a reply (debounced for burst messages, M13).
+        GenerateAiReply::dispatch($this->workspaceId, $conversation->id, $created->id)
+            ->delay(now()->addSeconds(8));
+
         Tenancy::clear();
     }
 }
