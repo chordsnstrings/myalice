@@ -1,7 +1,11 @@
 # Multi-Channel Broadcasts — Engineering Plan
 
-> Status: **Planning approved, not yet implemented.** Branch: `claude/broadcasts`
-> (built phase-by-phase, each merged to `main` only when green).
+> Status: **Implemented** on `claude/broadcasts`. Phases 0–4 built and green
+> (Pint · PHPStan L6 · tsc · Pest · build). New scheduled commands:
+> `templates:sync` (30 min), `broadcasts:launch-due` (every minute) — both ride
+> the existing cron-drained scheduler, no new infra. Remaining future polish:
+> A/B variants, opt-out-spike auto-pause, country-specific pricing, true Graph
+> API template payloads for Messenger/IG tags.
 
 ## Context
 

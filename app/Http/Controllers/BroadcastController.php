@@ -8,9 +8,11 @@ use App\Models\Broadcast;
 use App\Models\BroadcastRecipient;
 use App\Models\Channel;
 use App\Models\MessageTemplate;
+use App\Services\AnalyticsService;
 use App\Services\BroadcastLauncher;
 use App\Services\BroadcastPricing;
 use App\Services\WalletService;
+use App\Support\AnalyticsFilters;
 use App\Support\InsufficientFundsException;
 use App\Support\Tenancy;
 use Illuminate\Http\JsonResponse;
@@ -41,7 +43,12 @@ class BroadcastController extends Controller
             'schedule_at' => optional($b->schedule_at)->toIso8601String(),
         ]);
 
-        return Inertia::render('Broadcasts/Index', ['broadcasts' => $broadcasts]);
+        $filters = new AnalyticsFilters(now()->subDays(30)->startOfDay(), now()->endOfDay(), '30d', null, null);
+
+        return Inertia::render('Broadcasts/Index', [
+            'broadcasts' => $broadcasts,
+            'summary' => app(AnalyticsService::class)->broadcastPerformance($filters),
+        ]);
     }
 
     /** Broadcast composer with the wallet pre-flight gate (B6.2 / C-03). */

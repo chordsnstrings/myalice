@@ -58,7 +58,12 @@ self-hosted base URL); confirm your egress/firewall policy permits them.
     `queue:work --stop-when-empty --tries=3 --max-time=50` (`->everyMinute()->withoutOverlapping()`),
     `analytics:snapshot` (`->dailyAt('00:20')`, analytics trend rollups),
     `ai:reengage` (`->hourly()->withoutOverlapping()`, ~23h in-window AI re-engagement),
+    `templates:sync` (`->everyThirtyMinutes()`, pull WhatsApp template approval statuses),
+    `broadcasts:launch-due` (`->everyMinute()`, launch scheduled broadcasts),
     plus daily housekeeping (prune batches, clear resets, prune Sanctum tokens).
+    Broadcast sends ride the same queue as paced, resumable `SendBroadcastChunk`
+    jobs — no daemon; wallet cost is reserved at launch and the unsent remainder
+    refunded on completion/cancel.
     The **AI reply job** (`GenerateAiReply`) and **re-engagement job**
     (`SendAiReengagement`) ride this same queue — no extra daemon. The reply
     loop's 35s wall-clock guard fits inside `--max-time=50`, and `tries=1` ensures

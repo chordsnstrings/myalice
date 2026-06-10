@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\Events\MessageCreated;
+use App\Models\Broadcast;
+use App\Models\BroadcastRecipient;
 use App\Models\Contact;
 use App\Models\ContactChannel;
 use App\Models\Conversation;
@@ -122,6 +124,16 @@ class ProcessInboundMessage implements ShouldQueue
             'last_message' => $body,
             'last_message_at' => now(),
         ]);
+
+        // Attribute a reply to the most recent broadcast that reached this contact.
+        $recipient = BroadcastRecipient::where('contact_id', $contact->id)
+            ->whereIn('status', ['sent', 'delivered', 'read'])
+            ->whereNull('replied_at')
+            ->latest('sent_at')->first();
+        if ($recipient) {
+            $recipient->update(['status' => 'replied', 'replied_at' => now()]);
+            Broadcast::where('id', $recipient->broadcast_id)->increment('replied');
+        }
 
         // An opt-out takes the conversation off the AI; otherwise let the agent
         // consider a reply (debounced for burst messages, M13).

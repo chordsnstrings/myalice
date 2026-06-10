@@ -3,10 +3,22 @@ import { Plus, FileText } from 'lucide-react';
 import { AppShell } from '@/components/shell/AppShell';
 import { Page } from '@/components/shell/Page';
 import { Table, type Column } from '@/components/ui/Table';
+import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { FirstUseEmpty } from '@/components/ui/States';
 import { money, relativeTime } from '@/lib/utils';
+
+interface Summary {
+    sent: number;
+    delivered: number;
+    read: number;
+    replied: number;
+    delivery_rate: number;
+    read_rate: number;
+    reply_rate: number;
+    spend: number;
+}
 
 interface Broadcast {
     id: number;
@@ -33,7 +45,7 @@ const tone: Record<string, 'neutral' | 'warning' | 'success' | 'info' | 'danger'
     failed: 'danger',
 };
 
-export default function BroadcastsIndex({ broadcasts }: { broadcasts: Broadcast[] }) {
+export default function BroadcastsIndex({ broadcasts, summary }: { broadcasts: Broadcast[]; summary: Summary }) {
     const columns: Column<Broadcast>[] = [
         {
             key: 'name',
@@ -85,6 +97,16 @@ export default function BroadcastsIndex({ broadcasts }: { broadcasts: Broadcast[
                     </>
                 }
             >
+                {summary.sent > 0 && (
+                    <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                        <SummaryStat label="Sent (30d)" value={summary.sent.toLocaleString()} />
+                        <SummaryStat label="Delivered" value={`${summary.delivery_rate}%`} />
+                        <SummaryStat label="Read" value={`${summary.read_rate}%`} />
+                        <SummaryStat label="Replied" value={`${summary.reply_rate}%`} />
+                        <SummaryStat label="Replies" value={summary.replied.toLocaleString()} />
+                        <SummaryStat label="Spend" value={money(summary.spend)} />
+                    </div>
+                )}
                 <Table
                     columns={columns}
                     rows={broadcasts}
@@ -98,5 +120,14 @@ export default function BroadcastsIndex({ broadcasts }: { broadcasts: Broadcast[
                 />
             </Page>
         </AppShell>
+    );
+}
+
+function SummaryStat({ label, value }: { label: string; value: string }) {
+    return (
+        <Card className="p-3.5">
+            <p className="text-xl font-semibold tracking-tight tnum">{value}</p>
+            <p className="mt-0.5 text-[12px] text-secondary">{label}</p>
+        </Card>
     );
 }

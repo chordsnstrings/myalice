@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\AiAction;
+use App\Models\Broadcast;
+use App\Models\BroadcastRecipient;
 use App\Models\Conversation;
 use App\Models\CsatRating;
 use App\Models\Message;
@@ -317,6 +319,40 @@ class AnalyticsService
                 'discount_total' => round($discountTotal, 2),
                 'reengagements_sent' => $reengagements,
                 'reengagement_recovery' => $reengagements > 0 ? round($recovered / $reengagements * 100, 1) : 0.0,
+            ];
+        });
+    }
+
+    /**
+     * Broadcast performance across the range: cumulative funnel + spend.
+     *
+     * @return array{sent:int, delivered:int, read:int, replied:int, failed:int, skipped:int, delivery_rate:float, read_rate:float, reply_rate:float, spend:float}
+     */
+    public function broadcastPerformance(AnalyticsFilters $f): array
+    {
+        return $this->remember($f, 'broadcasts', function () use ($f) {
+            $rows = BroadcastRecipient::whereBetween('created_at', [$f->from, $f->to])
+                ->selectRaw('status, count(*) as aggregate')->groupBy('status')->pluck('aggregate', 'status');
+
+            $r = fn (string $k) => (int) ($rows[$k] ?? 0);
+            // Status advances, so each tier includes the ones beyond it.
+            $sent = $r('sent') + $r('delivered') + $r('read') + $r('replied');
+            $delivered = $r('delivered') + $r('read') + $r('replied');
+            $read = $r('read') + $r('replied');
+            $replied = $r('replied');
+            $spend = (float) Broadcast::whereBetween('created_at', [$f->from, $f->to])->sum('spent_cost');
+
+            return [
+                'sent' => $sent,
+                'delivered' => $delivered,
+                'read' => $read,
+                'replied' => $replied,
+                'failed' => $r('failed'),
+                'skipped' => $r('skipped'),
+                'delivery_rate' => $sent > 0 ? round($delivered / $sent * 100, 1) : 0.0,
+                'read_rate' => $delivered > 0 ? round($read / $delivered * 100, 1) : 0.0,
+                'reply_rate' => $delivered > 0 ? round($replied / $delivered * 100, 1) : 0.0,
+                'spend' => round($spend, 2),
             ];
         });
     }
