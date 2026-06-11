@@ -9,6 +9,15 @@ return [
     'history_limit' => 30,
     'catalog_limit' => 20,
 
+    // Knowledge injection (website/Facebook snippets) — how much to crawl + inject.
+    'knowledge' => [
+        'snippet_limit' => (int) env('AI_KNOWLEDGE_SNIPPETS', 6),
+        'char_cap' => (int) env('AI_KNOWLEDGE_CHAR_CAP', 2000),
+        'chunk_chars' => (int) env('AI_KNOWLEDGE_CHUNK_CHARS', 800),
+        'fetch_timeout' => (int) env('AI_KNOWLEDGE_FETCH_TIMEOUT', 10),
+        'max_snippets_per_source' => (int) env('AI_KNOWLEDGE_MAX_PER_SOURCE', 40),
+    ],
+
     // Wall-clock budget for the whole agent run (seconds) — fits the cron worker.
     'run_budget' => 35,
 

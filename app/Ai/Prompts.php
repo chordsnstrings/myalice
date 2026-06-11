@@ -5,6 +5,7 @@ namespace App\Ai;
 use App\Models\AiAgent;
 use App\Models\Contact;
 use App\Models\Conversation;
+use App\Models\KnowledgeSnippet;
 use App\Models\Product;
 use App\Models\Workspace;
 
@@ -84,6 +85,10 @@ class Prompts
             $sections[] = "CATALOG (the ONLY source of products, prices and stock — never invent prices; any discount must come from the offer_discount tool):\n".$catalog;
         }
 
+        if ($knowledge = self::knowledge($agent, $conversation)) {
+            $sections[] = "KNOWLEDGE (from your website / Facebook page — use it to answer; don't contradict it):\n".$knowledge;
+        }
+
         $ctx = ['Today: '.now($ws->timezone ?: 'UTC')->toDayDateTimeString(), 'Currency: '.$ws->currency];
         if ($contact) {
             $ctx[] = 'Customer: '.$contact->name.' (stage: '.$contact->lifecycle_stage.')';
@@ -155,6 +160,65 @@ class Prompts
             '- If they still hesitate, you may call offer_discount once more to escalate to the next layer. When it reports the offer is exhausted, stop discounting and consider a handoff.',
             '- When the customer agrees to buy, create the order with apply_offer=true so the approved discount is applied.',
         ]);
+    }
+
+    /**
+     * Top knowledge snippets for this agent, ranked by overlap with the latest
+     * customer message (keyword match — no embeddings), within a char budget.
+     */
+    private static function knowledge(AiAgent $agent, Conversation $conversation): string
+    {
+        $snippets = KnowledgeSnippet::whereHas('source', function ($q) use ($agent) {
+            $q->where('status', 'fetched')->where(function ($s) use ($agent) {
+                $s->whereNull('ai_agent_id');
+                if ($agent->id) {
+                    $s->orWhere('ai_agent_id', $agent->id);
+                }
+            });
+        })->limit(200)->get(['id', 'content']);
+
+        if ($snippets->isEmpty()) {
+            return '';
+        }
+
+        $terms = $conversation->exists
+            ? self::terms((string) $conversation->messages()->where('author', 'customer')->latest('sent_at')->value('body'))
+            : [];
+
+        $ranked = $snippets->sortByDesc(function (KnowledgeSnippet $snippet) use ($terms) {
+            if ($terms === []) {
+                return 0;
+            }
+            $content = mb_strtolower($snippet->content);
+
+            return collect($terms)->filter(fn ($t) => str_contains($content, $t))->count();
+        })->take((int) config('ai.knowledge.snippet_limit', 6));
+
+        $cap = (int) config('ai.knowledge.char_cap', 2000);
+        $out = [];
+        $used = 0;
+        foreach ($ranked as $snippet) {
+            $content = trim($snippet->content);
+            if ($used + mb_strlen($content) > $cap) {
+                break;
+            }
+            $out[] = '- '.$content;
+            $used += mb_strlen($content);
+        }
+
+        return implode("\n", $out);
+    }
+
+    /**
+     * Significant lowercase keywords (4+ chars) for relevance scoring.
+     *
+     * @return list<string>
+     */
+    private static function terms(string $text): array
+    {
+        $words = preg_split('/\W+/', mb_strtolower($text)) ?: [];
+
+        return array_values(array_unique(array_filter($words, fn ($w) => mb_strlen($w) >= 4)));
     }
 
     /** Admin-chosen reply shape (length / format / emoji). */

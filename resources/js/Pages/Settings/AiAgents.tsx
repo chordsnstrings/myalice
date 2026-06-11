@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Check, Lock, Plus, Send, Sparkles, Star, Trash2 } from 'lucide-react';
+import { Check, Lock, Plus, RefreshCw, Send, Sparkles, Star, Trash2 } from 'lucide-react';
 import { SettingsLayout } from '@/components/settings/SettingsLayout';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -104,12 +104,24 @@ interface ScopeOption {
     type: string | null;
 }
 
+interface KnowledgeItem {
+    id: number;
+    type: string;
+    title: string;
+    url: string | null;
+    status: string;
+    snippets: number;
+    shared: boolean;
+    last_fetched_at: string | null;
+}
+
 interface Props {
     providers: Provider[];
     presets: Preset[];
     agent: AgentProfile;
     scope: string;
     scopes: ScopeOption[];
+    knowledge: KnowledgeItem[];
     meta: Meta;
     llm_unlocked: boolean;
 }
@@ -118,7 +130,7 @@ const selectClass =
     'h-9 w-full rounded-[var(--radius-control)] border border-strong bg-surface px-3 text-sm text-primary ' +
     'focus:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40';
 
-export default function AiAgents({ providers, presets, agent, scope, scopes, meta, llm_unlocked }: Props) {
+export default function AiAgents({ providers, presets, agent, scope, scopes, knowledge, meta, llm_unlocked }: Props) {
     const { toast } = useToast();
     const [connecting, setConnecting] = useState<Preset | null>(null);
 
@@ -178,6 +190,8 @@ export default function AiAgents({ providers, presets, agent, scope, scopes, met
             </Section>
 
             <AgentForm key={scope} agent={agent} scope={scope} meta={meta} providers={providers} toast={toast} />
+
+            <KnowledgePanel key={'k'+scope} knowledge={knowledge} scope={scope} toast={toast} />
 
             <Playground hasProvider={providers.length > 0} />
 
@@ -689,6 +703,75 @@ function AgentForm({
                     <Button loading={processing} onClick={submit}>
                         Save agent
                     </Button>
+                </div>
+            </Card>
+        </Section>
+    );
+}
+
+function KnowledgePanel({
+    knowledge,
+    scope,
+    toast,
+}: {
+    knowledge: KnowledgeItem[];
+    scope: string;
+    toast: ReturnType<typeof useToast>['toast'];
+}) {
+    const [type, setType] = useState('website');
+    const [title, setTitle] = useState('');
+    const [url, setUrl] = useState('');
+    const [text, setText] = useState('');
+    const [busy, setBusy] = useState(false);
+
+    const add = () => {
+        setBusy(true);
+        router.post('/settings/ai-agents/knowledge', { scope, type, title, url, text }, {
+            preserveScroll: true,
+            onSuccess: () => { toast('Knowledge source added', { tone: 'success' }); setTitle(''); setUrl(''); setText(''); },
+            onError: (e) => toast(Object.values(e)[0] ?? 'Could not add', { tone: 'error' }),
+            onFinish: () => setBusy(false),
+        });
+    };
+    const refresh = (id: number) => router.post(`/settings/ai-agents/knowledge/${id}/refresh`, {}, { preserveScroll: true, onSuccess: () => toast('Refreshing…', { tone: 'info' }) });
+    const remove = (id: number) => router.delete(`/settings/ai-agents/knowledge/${id}`, { preserveScroll: true, onSuccess: () => toast('Removed', { tone: 'info' }) });
+
+    return (
+        <Section title="Knowledge" subtitle="Let the agent answer from your website, Facebook page, or pasted notes. Top matches are injected into each reply.">
+            <Card className="space-y-4 p-5">
+                {knowledge.length > 0 && (
+                    <div className="space-y-2">
+                        {knowledge.map((k) => (
+                            <div key={k.id} className="flex items-center gap-3 rounded-[var(--radius-control)] border border-default px-3 py-2">
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-[13px] font-medium">{k.title} {k.shared && <Badge tone="neutral" className="ms-1">shared</Badge>}</p>
+                                    <p className="truncate text-[12px] text-tertiary">{k.type}{k.url ? ' · ' + k.url : ''} · {k.snippets} snippet{k.snippets === 1 ? '' : 's'}{k.last_fetched_at ? ' · ' + k.last_fetched_at : ''}</p>
+                                </div>
+                                <Badge tone={k.status === 'fetched' ? 'success' : k.status === 'error' ? 'danger' : 'warning'}>{k.status}</Badge>
+                                {k.type !== 'manual' && <Button size="sm" variant="ghost" onClick={() => refresh(k.id)} title="Refresh"><RefreshCw className="size-4" /></Button>}
+                                <Button size="sm" variant="ghost" onClick={() => remove(k.id)} title="Remove"><Trash2 className="size-4 text-danger" /></Button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <div className="space-y-3 border-t border-default pt-4">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        <Field label="Source type">
+                            <select className={selectClass} value={type} onChange={(e) => setType(e.target.value)}>
+                                <option value="website">Website URL</option>
+                                <option value="facebook_page">Facebook page</option>
+                                <option value="manual">Pasted text</option>
+                            </select>
+                        </Field>
+                        <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+                    </div>
+                    {type === 'website' && <Input label="URL" placeholder="https://…" value={url} onChange={(e) => setUrl(e.target.value)} />}
+                    {type === 'manual' && <Textarea label="Text" rows={4} value={text} onChange={(e) => setText(e.target.value)} />}
+                    {type === 'facebook_page' && <p className="text-[12px] text-tertiary">Pulls the connected Facebook Page's about/description via the Graph API.</p>}
+                    <div className="flex justify-end">
+                        <Button loading={busy} disabled={!title} onClick={add}><Plus className="size-4" /> Add source</Button>
+                    </div>
                 </div>
             </Card>
         </Section>

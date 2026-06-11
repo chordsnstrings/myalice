@@ -11,6 +11,7 @@ use App\Http\Controllers\CommerceController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InboxController;
+use App\Http\Controllers\KnowledgeController;
 use App\Http\Controllers\Reports\AgentPerformanceController;
 use App\Http\Controllers\Reports\CsatReportController;
 use App\Http\Controllers\Reports\SalesReportController;
@@ -134,6 +135,9 @@ Route::middleware(['auth', 'workspace'])->group(function () {
         Route::delete('/settings/ai-agents/providers/{provider}', [AiAgentController::class, 'disconnectProvider'])->name('ai.providers.disconnect');
         Route::put('/settings/ai-agents/agent', [AiAgentController::class, 'updateAgent'])->name('ai.agent.update');
         Route::post('/settings/ai-agents/playground', [AiAgentController::class, 'playground'])->name('ai.playground');
+        Route::post('/settings/ai-agents/knowledge', [KnowledgeController::class, 'addSource'])->name('ai.knowledge.add');
+        Route::post('/settings/ai-agents/knowledge/{source}/refresh', [KnowledgeController::class, 'refreshSource'])->name('ai.knowledge.refresh');
+        Route::delete('/settings/ai-agents/knowledge/{source}', [KnowledgeController::class, 'deleteSource'])->name('ai.knowledge.delete');
         Route::post('/inbox/ai-drafts/{message}/send', [AiAgentController::class, 'sendDraft'])->name('ai.drafts.send');
         Route::delete('/inbox/ai-drafts/{message}', [AiAgentController::class, 'dismissDraft'])->name('ai.drafts.dismiss');
     });

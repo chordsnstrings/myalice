@@ -11,6 +11,7 @@ use App\Jobs\SendOutboundMessage;
 use App\Models\AiAgent;
 use App\Models\AiProvider;
 use App\Models\Channel;
+use App\Models\KnowledgeSource;
 use App\Models\Message;
 use App\Support\Plans;
 use App\Support\Tenancy;
@@ -72,9 +73,35 @@ class AiAgentController extends Controller
             'agent' => $this->agentPayload($scope),
             'scope' => $scope,
             'scopes' => $scopes,
+            'knowledge' => $this->knowledgePayload($scope),
             'meta' => Prompts::presets(),
             'llm_unlocked' => Plans::includes($ws->plan, 'llm'),
         ]);
+    }
+
+    /**
+     * Knowledge sources that apply to this scope: the scope's own + shared (null).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function knowledgePayload(string $scope): array
+    {
+        $agentId = $scope === self::SCOPE ? null : AiAgent::where('channel_scope', $scope)->value('id');
+
+        return KnowledgeSource::withCount('snippets')
+            ->where(function ($q) use ($agentId) {
+                $q->whereNull('ai_agent_id');
+                if ($agentId) {
+                    $q->orWhere('ai_agent_id', $agentId);
+                }
+            })
+            ->latest()->get()
+            ->map(fn ($s) => [
+                'id' => $s->id, 'type' => $s->type, 'title' => $s->title, 'url' => $s->url,
+                'status' => $s->status, 'snippets' => $s->snippets_count,
+                'shared' => $s->ai_agent_id === null,
+                'last_fetched_at' => optional($s->last_fetched_at)->diffForHumans(),
+            ])->all();
     }
 
     /**
