@@ -61,7 +61,7 @@ class GenerateAiReply implements ShouldQueue
             return;
         }
 
-        $config = AiAgent::resolveFor($conversation->channel);
+        $config = AiAgent::resolveFor($conversation->channel, $conversation->channel_id);
         if (! $config || ! $config->enabled || $config->mode === 'off') {
             return;
         }

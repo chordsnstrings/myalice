@@ -10,6 +10,7 @@ use App\Events\MessageCreated;
 use App\Jobs\SendOutboundMessage;
 use App\Models\AiAgent;
 use App\Models\AiProvider;
+use App\Models\Channel;
 use App\Models\Message;
 use App\Support\Plans;
 use App\Support\Tenancy;
@@ -32,9 +33,15 @@ class AiAgentController extends Controller
     /** The single agent profile we expose in the panel is the 'all'-channel row. */
     private const SCOPE = 'all';
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $ws = Tenancy::currentOrFail();
+
+        $scopes = $this->scopeOptions();
+        $scope = (string) $request->query('scope', self::SCOPE);
+        if (! collect($scopes)->pluck('value')->contains($scope)) {
+            $scope = self::SCOPE;
+        }
 
         $presets = [];
         foreach ((array) config('ai.presets') as $key => $p) {
@@ -62,10 +69,32 @@ class AiAgentController extends Controller
                 'is_default' => $p->is_default,
             ])->all(),
             'presets' => $presets,
-            'agent' => $this->agentPayload(),
+            'agent' => $this->agentPayload($scope),
+            'scope' => $scope,
+            'scopes' => $scopes,
             'meta' => Prompts::presets(),
             'llm_unlocked' => Plans::includes($ws->plan, 'llm'),
         ]);
+    }
+
+    /**
+     * Configurable agent scopes: the default + each connected page/number.
+     *
+     * @return list<array{value: string, label: string, type: string|null}>
+     */
+    private function scopeOptions(): array
+    {
+        $options = [['value' => self::SCOPE, 'label' => 'All channels (default)', 'type' => null]];
+
+        foreach (Channel::whereIn('type', ['whatsapp', 'messenger', 'instagram'])->orderBy('type')->get() as $channel) {
+            $options[] = [
+                'value' => 'channel:'.$channel->id,
+                'label' => $channel->name.' · '.ucfirst($channel->type),
+                'type' => $channel->type,
+            ];
+        }
+
+        return $options;
     }
 
     public function connectProvider(Request $request, LlmManager $llm): RedirectResponse
@@ -168,6 +197,7 @@ class AiAgentController extends Controller
         $ws = Tenancy::currentOrFail();
 
         $data = $request->validate([
+            'scope' => ['required', 'string', Rule::in(collect($this->scopeOptions())->pluck('value'))],
             'name' => ['required', 'string', 'max:60'],
             'enabled' => ['boolean'],
             'mode' => ['required', 'in:off,suggest,auto,autopilot'],
@@ -206,7 +236,7 @@ class AiAgentController extends Controller
         ]);
 
         AiAgent::updateOrCreate(
-            ['workspace_id' => $ws->id, 'channel_scope' => self::SCOPE],
+            ['workspace_id' => $ws->id, 'channel_scope' => $data['scope']],
             [
                 'name' => $data['name'],
                 'enabled' => $data['enabled'] ?? true,
@@ -296,11 +326,11 @@ class AiAgentController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function agentPayload(): array
+    private function agentPayload(string $scope = self::SCOPE): array
     {
-        $agent = AiAgent::resolveFor(self::SCOPE);
+        $agent = AiAgent::where('channel_scope', $scope)->first();
         if (! $agent) {
-            return $this->defaults() + ['guardrails' => AiAgent::DEFAULT_GUARDRAILS];
+            return $this->defaults($scope) + ['guardrails' => AiAgent::DEFAULT_GUARDRAILS];
         }
 
         return [
@@ -318,14 +348,14 @@ class AiAgentController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function defaults(): array
+    private function defaults(string $scope = self::SCOPE): array
     {
         return [
             'name' => 'Sales Assistant',
             'enabled' => true,
             'mode' => 'auto',
             'goal' => 'sale',
-            'channel_scope' => self::SCOPE,
+            'channel_scope' => $scope,
             'tone' => 'friendly',
             'methodology' => 'consultative_spin',
             'business_profile' => null,

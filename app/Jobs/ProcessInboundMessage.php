@@ -35,6 +35,7 @@ class ProcessInboundMessage implements ShouldQueue
         public int $workspaceId,
         public string $channel,
         public array $message,
+        public ?int $channelId = null,
     ) {}
 
     public function handle(): void
@@ -65,8 +66,13 @@ class ProcessInboundMessage implements ShouldQueue
 
         $conversation = Conversation::firstOrCreate(
             ['contact_id' => $contact->id, 'channel' => $this->channel],
-            ['status' => 'open', 'window_open' => true],
+            ['status' => 'open', 'window_open' => true, 'channel_id' => $this->channelId],
         );
+
+        // Keep the originating page/number current (per-page agent resolution).
+        if ($this->channelId && $conversation->channel_id !== $this->channelId) {
+            $conversation->channel_id = $this->channelId;
+        }
 
         // Auto-route brand-new conversations to an available agent (M5).
         if ($conversation->wasRecentlyCreated) {

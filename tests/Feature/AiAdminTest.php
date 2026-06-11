@@ -138,6 +138,7 @@ it('updates the agent profile', function () {
     $user = aiOwner();
 
     $this->actingAs($user)->put('/settings/ai-agents/agent', [
+        'scope' => 'all',
         'name' => 'Ava', 'enabled' => true, 'mode' => 'autopilot', 'goal' => 'lead',
         'tone' => 'professional', 'methodology' => 'direct_closer',
         'business_profile' => 'We sell mugs.', 'guardrails' => ['max_messages_per_conversation' => 8],
@@ -155,6 +156,7 @@ it('saves discount layers, closure techniques and re-engagement config', functio
     $user = aiOwner();
 
     $this->actingAs($user)->put('/settings/ai-agents/agent', [
+        'scope' => 'all',
         'name' => 'Ava', 'enabled' => true, 'mode' => 'autopilot', 'goal' => 'sale',
         'tone' => 'friendly', 'methodology' => 'direct_closer',
         'guardrails' => [
@@ -181,6 +183,7 @@ it('rejects an unknown closure technique or discount type', function () {
     $user = aiOwner();
 
     $this->actingAs($user)->put('/settings/ai-agents/agent', [
+        'scope' => 'all',
         'name' => 'Ava', 'enabled' => true, 'mode' => 'auto', 'goal' => 'sale',
         'tone' => 'friendly', 'methodology' => 'direct_closer',
         'guardrails' => ['closure_techniques' => ['mind_control']],

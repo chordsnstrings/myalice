@@ -89,10 +89,18 @@ interface Meta {
     discount_types: Opt[];
 }
 
+interface ScopeOption {
+    value: string;
+    label: string;
+    type: string | null;
+}
+
 interface Props {
     providers: Provider[];
     presets: Preset[];
     agent: AgentProfile;
+    scope: string;
+    scopes: ScopeOption[];
     meta: Meta;
     llm_unlocked: boolean;
 }
@@ -101,7 +109,7 @@ const selectClass =
     'h-9 w-full rounded-[var(--radius-control)] border border-strong bg-surface px-3 text-sm text-primary ' +
     'focus:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40';
 
-export default function AiAgents({ providers, presets, agent, meta, llm_unlocked }: Props) {
+export default function AiAgents({ providers, presets, agent, scope, scopes, meta, llm_unlocked }: Props) {
     const { toast } = useToast();
     const [connecting, setConnecting] = useState<Preset | null>(null);
 
@@ -146,7 +154,21 @@ export default function AiAgents({ providers, presets, agent, meta, llm_unlocked
                 </div>
             </Section>
 
-            <AgentForm agent={agent} meta={meta} providers={providers} toast={toast} />
+            <Section title="Agent configuration" subtitle="Tune the default agent, or pick a connected page/number to give it its own context, tone and behaviour.">
+                <Field label="Configuring">
+                    <select
+                        className={selectClass}
+                        value={scope}
+                        onChange={(e) => router.get('/settings/ai-agents', { scope: e.target.value }, { preserveScroll: true })}
+                    >
+                        {scopes.map((s) => (
+                            <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                    </select>
+                </Field>
+            </Section>
+
+            <AgentForm key={scope} agent={agent} scope={scope} meta={meta} providers={providers} toast={toast} />
 
             <Playground hasProvider={providers.length > 0} />
 
@@ -286,16 +308,19 @@ function ConnectDrawer({
 
 function AgentForm({
     agent,
+    scope,
     meta,
     providers,
     toast,
 }: {
     agent: AgentProfile;
+    scope: string;
     meta: Meta;
     providers: Provider[];
     toast: ReturnType<typeof useToast>['toast'];
 }) {
     const { data, setData, put, processing, errors } = useForm({
+        scope,
         name: agent.name,
         enabled: agent.enabled,
         mode: agent.mode,

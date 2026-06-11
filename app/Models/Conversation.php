@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
  * @property int $workspace_id
  * @property int $contact_id
  * @property string $channel
+ * @property int|null $channel_id
  * @property string $status
  * @property int|null $assignee_id
  * @property int $unread
@@ -34,7 +35,7 @@ class Conversation extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'workspace_id', 'contact_id', 'channel', 'status', 'assignee_id', 'unread',
+        'workspace_id', 'contact_id', 'channel', 'channel_id', 'status', 'assignee_id', 'unread',
         'window_open', 'sla_breaching', 'last_message', 'last_message_at',
         'first_response_at', 'assigned_at', 'resolved_at', 'awaiting_csat_at', 'ai_status', 'reengaged_at', 'ai_resumed_at',
     ];

@@ -61,7 +61,7 @@ class SendReengagements extends Command
 
         $count = 0;
         foreach ($candidates as $c) {
-            $agent = AiAgent::resolveFor($c->channel);
+            $agent = AiAgent::resolveFor($c->channel, $c->channel_id);
             if (! $this->eligible($c, $agent)) {
                 continue;
             }

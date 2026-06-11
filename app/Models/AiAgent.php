@@ -90,9 +90,19 @@ class AiAgent extends Model
         return $merged;
     }
 
-    /** Resolve the agent for a channel: exact scope match, else the 'all' row. */
-    public static function resolveFor(string $channel): ?self
+    /**
+     * Resolve the agent for a conversation: a page-specific agent (channel:{id})
+     * wins, then the channel-type agent, then the workspace default ('all').
+     */
+    public static function resolveFor(string $channel, ?int $channelId = null): ?self
     {
+        if ($channelId !== null) {
+            $byPage = static::where('channel_scope', 'channel:'.$channelId)->first();
+            if ($byPage) {
+                return $byPage;
+            }
+        }
+
         return static::where('channel_scope', $channel)->first()
             ?? static::where('channel_scope', 'all')->first();
     }

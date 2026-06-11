@@ -55,7 +55,7 @@ class SendAiReengagement implements ShouldQueue
                 return;
             }
 
-            $config = AiAgent::resolveFor($conversation->channel);
+            $config = AiAgent::resolveFor($conversation->channel, $conversation->channel_id);
             if (! $config || ! $config->enabled || ! in_array($config->mode, ['auto', 'autopilot'], true)) {
                 return;
             }

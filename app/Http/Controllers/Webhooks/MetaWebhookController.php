@@ -84,7 +84,7 @@ abstract class MetaWebhookController extends Controller
             $connector = $channels->for($this->type());
 
             foreach ($connector->normalizeInbound($payload) as $message) {
-                ProcessInboundMessage::dispatch($channel->workspace_id, $this->type(), $message);
+                ProcessInboundMessage::dispatch($channel->workspace_id, $this->type(), $message, $channel->id);
             }
 
             // Delivery/read/failed receipts → reconcile message + recipient status.
