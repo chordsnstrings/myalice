@@ -110,7 +110,7 @@ export default function Wizard() {
                             ] as const).map(([c, tile]) => (
                                 <button
                                     key={c}
-                                    onClick={() => complete('channel')}
+                                    onClick={() => { complete('channel'); router.visit('/settings/channels'); }}
                                     className="lift group flex w-full items-center gap-3 rounded-[var(--radius-card)] border border-default bg-surface px-4 py-3 text-sm font-medium shadow-[var(--shadow-xs)]"
                                 >
                                     <span className={cn('flex size-8 items-center justify-center rounded-[9px] text-[13px] font-bold text-white', tile)}>
@@ -126,7 +126,7 @@ export default function Wizard() {
                             ['Shopify', 'WooCommerce', 'Salla', 'Zid'].map((c) => (
                                 <button
                                     key={c}
-                                    onClick={() => complete('store')}
+                                    onClick={() => { complete('store'); router.visit('/products'); }}
                                     className="lift group flex w-full items-center gap-3 rounded-[var(--radius-card)] border border-default bg-surface px-4 py-3 text-sm font-medium shadow-[var(--shadow-xs)]"
                                 >
                                     <span className="flex size-8 items-center justify-center rounded-[9px] bg-accent-subtle text-accent">
@@ -143,7 +143,7 @@ export default function Wizard() {
                                 <p className="text-[13px] text-secondary">
                                     Invite teammates by email — they'll get a link to join your workspace.
                                 </p>
-                                <Button variant="secondary" size="sm" className="mt-3" onClick={() => complete('team')}>
+                                <Button variant="secondary" size="sm" className="mt-3" onClick={() => { complete('team'); router.visit('/settings/team'); }}>
                                     Add teammates
                                 </Button>
                             </div>

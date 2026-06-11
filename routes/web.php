@@ -12,6 +12,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InboxController;
 use App\Http\Controllers\KnowledgeController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Reports\AgentPerformanceController;
 use App\Http\Controllers\Reports\CsatReportController;
 use App\Http\Controllers\Reports\SalesReportController;
@@ -76,6 +77,7 @@ Route::middleware(['auth', 'workspace'])->group(function () {
     Route::get('/chatbots', [ChatbotController::class, 'index'])->name('chatbots');
     Route::middleware('can:manage-bots')->group(function () {
         Route::get('/chatbots/{chatbot}/edit', [ChatbotController::class, 'edit'])->name('chatbots.edit');
+        Route::put('/chatbots/{chatbot}', [ChatbotController::class, 'update'])->name('chatbots.update');
         Route::post('/chatbots/{chatbot}/publish', [ChatbotController::class, 'publish'])->name('chatbots.publish');
     });
 
@@ -112,6 +114,9 @@ Route::middleware(['auth', 'workspace'])->group(function () {
         Route::post('/store/connect', [CommerceController::class, 'connectStore'])->name('store.connect');
         Route::post('/store/sync', [CommerceController::class, 'syncStore'])->name('store.sync');
     });
+
+    // Top-bar notifications feed.
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications');
 
     // Workspace switching + creation (multi-workspace membership).
     Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');

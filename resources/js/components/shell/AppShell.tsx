@@ -14,7 +14,6 @@ import {
     Star,
     Settings,
     Search,
-    Bell,
     Wallet,
     Moon,
     Sun,
@@ -35,6 +34,7 @@ import { useToast } from '@/components/ui/Toast';
 import { CommandPalette } from './CommandPalette';
 import { OfflineBanner } from './OfflineBanner';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
+import { NotificationsBell } from './NotificationsBell';
 import { Brand } from '@/components/Brand';
 import { onInstallAvailability, promptInstall } from '@/lib/pwa';
 import type { PageProps } from '@/types';
@@ -219,12 +219,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                         {money(workspace?.wallet_balance ?? 0, workspace?.currency)}
                     </Link>
 
-                    <Tooltip label="Notifications">
-                        <button className="press relative flex size-9 items-center justify-center rounded-[var(--radius-control)] text-secondary hover:bg-surface-hover hover:text-primary sm:size-8">
-                            <Bell className="size-[18px]" />
-                            <span className="absolute end-2 top-2 size-1.5 rounded-full bg-danger sm:end-1.5 sm:top-1.5" />
-                        </button>
-                    </Tooltip>
+                    <NotificationsBell />
 
                     <Tooltip label={theme === 'dark' ? 'Light mode' : 'Dark mode'}>
                         <button

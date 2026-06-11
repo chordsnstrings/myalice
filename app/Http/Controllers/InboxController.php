@@ -8,6 +8,7 @@ use App\Jobs\SendOutboundMessage;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\MessageTemplate;
+use App\Models\QuickReply;
 use App\Models\User;
 use App\Support\Tenancy;
 use Illuminate\Http\JsonResponse;
@@ -68,6 +69,7 @@ class InboxController extends Controller
             'agents' => $agents->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name])->all(),
             'templates' => MessageTemplate::where('approval_status', 'approved')
                 ->orderBy('name')->get(['id', 'name', 'body'])->all(),
+            'quickReplies' => QuickReply::orderBy('shortcut')->get(['id', 'shortcut', 'body'])->all(),
         ]);
     }
 

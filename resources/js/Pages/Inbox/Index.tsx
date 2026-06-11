@@ -4,7 +4,6 @@ import { createPortal } from 'react-dom';
 import {
     Search,
     Smile,
-    Paperclip,
     Zap,
     ShoppingBag,
     Send,
@@ -40,7 +39,10 @@ interface Props {
     messages: Record<number, Message[]>;
     agents: { id: number; name: string }[];
     templates: { id: number; name: string; body: string }[];
+    quickReplies: { id: number; shortcut: string; body: string }[];
 }
+
+const EMOJIS = ['👍', '🙏', '😊', '🎉', '❤️', '🔥', '✅', '👋', '😍', '🚀', '💯', '🛒'];
 
 type ComposerState = 'free' | 'template' | 'bot' | 'resolved';
 
@@ -55,9 +57,10 @@ function StatusTick({ status }: { status?: Message['status'] }) {
     return null;
 }
 
-export default function InboxIndex({ conversations, messages: seed, agents, templates }: Props) {
+export default function InboxIndex({ conversations, messages: seed, agents, templates, quickReplies }: Props) {
     const { toast } = useToast();
     const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>('All');
+    const [tool, setTool] = useState<'emoji' | 'quick' | null>(null);
     const [query, setQuery] = useState('');
     const [selectedId, setSelectedId] = useState<number | null>(conversations[0]?.id ?? null);
     const [threads, setThreads] = useState(seed);
@@ -463,12 +466,66 @@ export default function InboxIndex({ conversations, messages: seed, agents, temp
                                         rows={2}
                                         className="w-full resize-none bg-transparent px-3.5 pt-3 text-[13px] outline-none placeholder:text-tertiary"
                                     />
-                                    <div className="flex items-center gap-1 px-2 pb-2">
-                                        {[Smile, Paperclip, Zap, ShoppingBag].map((Icon, i) => (
-                                            <button key={i} className="press flex size-9 items-center justify-center rounded-[var(--radius-control)] text-secondary hover:bg-surface-hover hover:text-primary sm:size-8">
-                                                <Icon className="size-[18px]" />
-                                            </button>
-                                        ))}
+                                    <div className="relative flex items-center gap-1 px-2 pb-2">
+                                        <button
+                                            onClick={() => setTool((t) => (t === 'emoji' ? null : 'emoji'))}
+                                            aria-label="Emoji"
+                                            className={cn(
+                                                'press flex size-9 items-center justify-center rounded-[var(--radius-control)] hover:bg-surface-hover hover:text-primary sm:size-8',
+                                                tool === 'emoji' ? 'bg-surface-hover text-primary' : 'text-secondary',
+                                            )}
+                                        >
+                                            <Smile className="size-[18px]" />
+                                        </button>
+                                        <button
+                                            onClick={() => setTool((t) => (t === 'quick' ? null : 'quick'))}
+                                            aria-label="Quick replies"
+                                            className={cn(
+                                                'press flex size-9 items-center justify-center rounded-[var(--radius-control)] hover:bg-surface-hover hover:text-primary sm:size-8',
+                                                tool === 'quick' ? 'bg-surface-hover text-primary' : 'text-secondary',
+                                            )}
+                                        >
+                                            <Zap className="size-[18px]" />
+                                        </button>
+
+                                        {tool === 'emoji' && (
+                                            <>
+                                                <div className="fixed inset-0 z-40" onClick={() => setTool(null)} />
+                                                <div className="animate-pop absolute bottom-full start-2 z-50 mb-2 grid grid-cols-6 gap-1 rounded-[var(--radius-card)] border border-default bg-surface p-2 shadow-[var(--shadow-md)]">
+                                                    {EMOJIS.map((e) => (
+                                                        <button
+                                                            key={e}
+                                                            onClick={() => { setDraft((d) => d + e); setTool(null); }}
+                                                            className="press flex size-8 items-center justify-center rounded-md text-lg hover:bg-surface-hover"
+                                                        >
+                                                            {e}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                        {tool === 'quick' && (
+                                            <>
+                                                <div className="fixed inset-0 z-40" onClick={() => setTool(null)} />
+                                                <div className="animate-pop absolute bottom-full start-2 z-50 mb-2 max-h-64 w-72 overflow-y-auto rounded-[var(--radius-card)] border border-default bg-surface p-1.5 shadow-[var(--shadow-md)]">
+                                                    {quickReplies.length === 0 ? (
+                                                        <p className="px-2.5 py-3 text-[12px] text-tertiary">No saved replies yet.</p>
+                                                    ) : (
+                                                        quickReplies.map((q) => (
+                                                            <button
+                                                                key={q.id}
+                                                                onClick={() => { setDraft((d) => (d ? d + ' ' : '') + q.body); setTool(null); }}
+                                                                className="flex w-full flex-col rounded-[var(--radius-control)] px-2.5 py-1.5 text-start hover:bg-surface-hover"
+                                                            >
+                                                                <span className="text-[12px] font-semibold text-accent">{q.shortcut}</span>
+                                                                <span className="line-clamp-1 text-[12px] text-secondary">{q.body}</span>
+                                                            </button>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
+
                                         <Button size="sm" className="ms-auto press" onClick={send} disabled={!draft.trim()}>
                                             <Send className="size-3.5" /> Send
                                         </Button>
