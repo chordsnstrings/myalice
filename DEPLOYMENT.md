@@ -60,6 +60,8 @@ self-hosted base URL); confirm your egress/firewall policy permits them.
     `ai:reengage` (`->hourly()->withoutOverlapping()`, ~23h in-window AI re-engagement),
     `templates:sync` (`->everyThirtyMinutes()`, pull WhatsApp template approval statuses),
     `broadcasts:launch-due` (`->everyMinute()`, launch scheduled broadcasts),
+    `knowledge:refresh` (`->daily()`, re-fetch website/Facebook agent knowledge),
+    `shopify:sync` (`->everyThirtyMinutes()`, sync connected Shopify catalogs),
     plus daily housekeeping (prune batches, clear resets, prune Sanctum tokens).
     Broadcast sends ride the same queue as paced, resumable `SendBroadcastChunk`
     jobs — no daemon; wallet cost is reserved at launch and the unsent remainder
