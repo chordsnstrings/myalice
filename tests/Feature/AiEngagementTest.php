@@ -110,6 +110,30 @@ it('does not engage when engage_new_conversations is disabled', function () {
     expect(Message::where('author', 'bot')->exists())->toBeFalse();
 });
 
+it('re-engages after a human resumes the AI, forgiving prior agent messages', function () {
+    $c = aiConv($this->contact->id, ['ai_status' => 'active', 'ai_resumed_at' => now()]);
+    // A human reply from BEFORE the resume — should be forgiven.
+    Message::create(['conversation_id' => $c->id, 'direction' => 'out', 'author' => 'agent', 'body' => 'I had this', 'sent_at' => now()->subMinutes(5)]);
+    $m = inbound($c);
+
+    engage($c, $m);
+
+    expect(Message::where('conversation_id', $c->id)->where('author', 'bot')->where('status', 'sent')->exists())->toBeTrue();
+    expect($c->fresh()->ai_status)->toBe('active');
+});
+
+it('re-suppresses if a human replies again after resuming', function () {
+    $c = aiConv($this->contact->id, ['ai_status' => 'active', 'ai_resumed_at' => now()->subMinutes(5)]);
+    // A human reply AFTER the resume — fresh takeover.
+    Message::create(['conversation_id' => $c->id, 'direction' => 'out', 'author' => 'agent', 'body' => 'taking over', 'sent_at' => now()]);
+    $m = inbound($c);
+
+    engage($c, $m);
+
+    expect($c->fresh()->ai_status)->toBe('suppressed');
+    expect(Message::where('author', 'bot')->exists())->toBeFalse();
+});
+
 it('backs off and suppresses once a human agent has replied', function () {
     $c = aiConv($this->contact->id);
     Message::create(['conversation_id' => $c->id, 'direction' => 'out', 'author' => 'agent', 'body' => 'I got this', 'sent_at' => now()]);

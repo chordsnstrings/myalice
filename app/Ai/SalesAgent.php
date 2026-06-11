@@ -197,6 +197,11 @@ class SalesAgent
     /** @param  array{in:int,out:int}  $usage */
     private function emitReply(AiAgent $agent, Conversation $conversation, Contact $contact, string $text, array $usage, string $provider, string $model, bool $handedOff): void
     {
+        // Optional humanized pause so the reply doesn't land instantly like a bot.
+        if ($agent->guardConfig()['humanize_replies'] ?? false) {
+            $this->humanizePause($text);
+        }
+
         $message = Message::create([
             'conversation_id' => $conversation->id,
             'direction' => 'out',
@@ -229,6 +234,18 @@ class SalesAgent
             'tokens_out' => $usage['out'],
             'created_at' => now(),
         ]);
+    }
+
+    /** Short, length-based "typing" delay (capped) so replies feel less instant. */
+    private function humanizePause(string $text): void
+    {
+        $cfg = (array) config('ai.typing');
+        $ms = (int) ($cfg['base_ms'] ?? 0) + mb_strlen($text) * (int) ($cfg['per_char_ms'] ?? 0);
+        $ms = min($ms, (int) ($cfg['max_ms'] ?? 0));
+
+        if ($ms > 0) {
+            usleep($ms * 1000);
+        }
     }
 
     /**

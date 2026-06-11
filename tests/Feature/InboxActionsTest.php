@@ -92,6 +92,15 @@ it('resolves and reopens a conversation', function () {
     expect($c->fresh()->resolved_at)->toBeNull();
 });
 
+it('resumes the AI on a handed-off conversation', function () {
+    $c = inboxConv($this->contact->id, ['ai_status' => 'handed_off']);
+
+    $this->actingAs($this->agent)->put("/conversations/{$c->id}/resume-ai")->assertRedirect();
+
+    expect($c->fresh()->ai_status)->toBe('active');
+    expect($c->fresh()->ai_resumed_at)->not->toBeNull();
+});
+
 it('assigns and unassigns a conversation', function () {
     $c = inboxConv($this->contact->id);
 

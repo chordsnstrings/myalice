@@ -162,6 +162,14 @@ export default function InboxIndex({ conversations, messages: seed, agents, temp
         });
     };
 
+    const resumeAi = () => {
+        if (!selectedId) return;
+        router.put(`/conversations/${selectedId}/resume-ai`, {}, {
+            preserveScroll: true,
+            onSuccess: () => toast('AI resumed — it will take the next message', { tone: 'success' }),
+        });
+    };
+
     const sendAiDraft = (cid: number, mid: number) => {
         setThreads((t) => ({
             ...t,
@@ -300,6 +308,11 @@ export default function InboxIndex({ conversations, messages: seed, agents, temp
                                         <Badge tone="warning" className="hidden sm:inline-flex">
                                             AI handed off
                                         </Badge>
+                                    )}
+                                    {(selected.ai_status === 'handed_off' || selected.ai_status === 'suppressed') && (
+                                        <Button size="sm" variant="secondary" className="hidden sm:inline-flex" onClick={resumeAi} title="Hand back to the AI">
+                                            <Sparkles className="size-3.5" /> Resume AI
+                                        </Button>
                                     )}
                                     <select
                                         className="hidden h-8 rounded-[var(--radius-control)] border border-strong bg-surface px-2 text-[12px] text-secondary sm:block"

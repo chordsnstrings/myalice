@@ -181,6 +181,7 @@ class AiAgentController extends Controller
             'guardrails.max_messages_per_conversation' => ['nullable', 'integer', 'min:1', 'max:100'],
             'guardrails.order_total_cap' => ['nullable', 'numeric', 'min:0'],
             'guardrails.engage_new_conversations' => ['boolean'],
+            'guardrails.humanize_replies' => ['boolean'],
             'guardrails.handoff_keywords' => ['array'],
             'guardrails.handoff_keywords.*' => ['string'],
             // High-closure techniques

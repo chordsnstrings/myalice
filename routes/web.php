@@ -54,6 +54,7 @@ Route::middleware(['auth', 'workspace'])->group(function () {
     Route::post('/conversations/{conversation}/messages', [InboxController::class, 'reply'])->name('conversations.reply');
     Route::put('/conversations/{conversation}/resolve', [InboxController::class, 'resolve'])->name('conversations.resolve');
     Route::put('/conversations/{conversation}/assign', [InboxController::class, 'assign'])->name('conversations.assign');
+    Route::put('/conversations/{conversation}/resume-ai', [InboxController::class, 'resumeAi'])->name('conversations.resume-ai');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Manager reports (B10.2–B10.4)

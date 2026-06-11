@@ -79,8 +79,13 @@ class GenerateAiReply implements ShouldQueue
             return;
         }
 
-        // Human back-off: any real agent reply suppresses the AI for good.
-        if ($conversation->messages()->where('author', 'agent')->exists()) {
+        // Human back-off: a real agent reply suppresses the AI. If a human has
+        // handed the chat back ("Resume AI"), only agent messages sent AFTER the
+        // resume count — earlier ones are forgiven.
+        $humanReplied = $conversation->messages()->where('author', 'agent')
+            ->when($conversation->ai_resumed_at, fn ($q) => $q->where('sent_at', '>', $conversation->ai_resumed_at))
+            ->exists();
+        if ($humanReplied) {
             $conversation->update(['ai_status' => 'suppressed']);
 
             return;

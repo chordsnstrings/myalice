@@ -147,6 +147,14 @@ class InboxController extends Controller
         return back();
     }
 
+    /** Hand a conversation back to the AI (re-arm after a handoff / human takeover). */
+    public function resumeAi(Conversation $conversation): RedirectResponse
+    {
+        $conversation->update(['ai_status' => 'active', 'ai_resumed_at' => now()]);
+
+        return back()->with('success', 'AI resumed — it will handle the next message.');
+    }
+
     /** Assign (or unassign) a conversation to a teammate in this workspace. */
     public function assign(Request $request, Conversation $conversation): RedirectResponse
     {

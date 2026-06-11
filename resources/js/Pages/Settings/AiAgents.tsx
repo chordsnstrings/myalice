@@ -60,6 +60,7 @@ interface Guardrails {
     max_messages_per_conversation: number;
     order_total_cap: number | null;
     engage_new_conversations: boolean;
+    humanize_replies: boolean;
     handoff_keywords: string[];
     closure_techniques: string[];
     discount: DiscountConfig;
@@ -308,6 +309,7 @@ function AgentForm({
             max_messages_per_conversation: agent.guardrails.max_messages_per_conversation,
             order_total_cap: agent.guardrails.order_total_cap,
             engage_new_conversations: agent.guardrails.engage_new_conversations,
+            humanize_replies: agent.guardrails.humanize_replies ?? false,
             handoff_keywords: agent.guardrails.handoff_keywords,
             closure_techniques: agent.guardrails.closure_techniques ?? [],
             discount: agent.guardrails.discount,
@@ -465,6 +467,16 @@ function AgentForm({
                             <Switch
                                 checked={data.guardrails.engage_new_conversations}
                                 onChange={(v) => setGuard('engage_new_conversations', v)}
+                            />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-[13px] font-medium">Humanize replies</p>
+                                <p className="text-[12px] text-tertiary">Add a short, length-based typing pause before sending so replies feel less instant.</p>
+                            </div>
+                            <Switch
+                                checked={data.guardrails.humanize_replies}
+                                onChange={(v) => setGuard('humanize_replies', v)}
                             />
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2">

@@ -32,6 +32,7 @@ class AiAgent extends Model
         'handoff_keywords' => ['human', 'agent', 'representative', 'person', 'refund'],
         'order_total_cap' => null,
         'engage_new_conversations' => true,
+        'humanize_replies' => false,
         // High-closure techniques the admin opts into (see App\Ai\Prompts).
         'closure_techniques' => [],
         // Pre-approved, layered discounts. The agent reveals layers one at a time

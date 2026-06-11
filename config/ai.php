@@ -12,6 +12,15 @@ return [
     // Wall-clock budget for the whole agent run (seconds) — fits the cron worker.
     'run_budget' => 35,
 
+    // Humanized "typing" pause before an auto-reply is sent (enabled per-agent via
+    // the humanize_replies guardrail). Delay = base + chars*per_char, capped at max.
+    // Kept small so it stays within the run budget / 50s worker.
+    'typing' => [
+        'base_ms' => (int) env('AI_TYPING_BASE_MS', 700),
+        'per_char_ms' => (int) env('AI_TYPING_PER_CHAR_MS', 18),
+        'max_ms' => (int) env('AI_TYPING_MAX_MS', 6000),
+    ],
+
     /*
     | Provider presets surfaced as cards in the admin panel. `openai_compatible`
     | entries reuse the OpenAI driver via base_url (self-hosted + aggregators).
