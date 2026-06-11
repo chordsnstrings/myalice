@@ -29,7 +29,7 @@ export function Tabs({
                     {typeof t.count === 'number' && (
                         <span className="rounded-full bg-surface-2 px-1.5 text-[11px] text-tertiary">{t.count}</span>
                     )}
-                    {active === t.id && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-accent" />}
+                    {active === t.id && <span className="brand-gradient absolute inset-x-0 -bottom-px h-0.5 rounded-full" />}
                 </button>
             ))}
         </div>

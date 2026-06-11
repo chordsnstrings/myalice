@@ -36,18 +36,20 @@ export function FilterBar({ routeUrl, filters, channels, agents }: Props) {
     };
 
     const selectClass =
-        'h-8 rounded-[var(--radius-control)] border border-default bg-surface px-2.5 text-[13px] text-primary outline-none focus:border-accent';
+        'h-8 cursor-pointer rounded-[var(--radius-control)] border border-strong bg-surface px-2.5 text-[13px] text-primary outline-none transition-colors hover:bg-surface-hover focus:border-accent';
 
     return (
         <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-[var(--radius-control)] border border-default bg-surface p-0.5">
+            <div className="inline-flex rounded-[var(--radius-control)] border border-default bg-surface p-0.5 shadow-[var(--shadow-xs)]">
                 {ranges.map((r) => (
                     <button
                         key={r.id}
                         onClick={() => go({ range: r.id })}
                         className={cn(
-                            'rounded-[5px] px-2.5 py-1 text-[13px] font-medium transition-colors',
-                            filters.range === r.id ? 'bg-accent-subtle text-accent' : 'text-secondary hover:text-primary',
+                            'press rounded-[6px] px-2.5 py-1 text-[13px] font-medium transition-all',
+                            filters.range === r.id
+                                ? 'brand-gradient text-accent-contrast shadow-[var(--shadow-xs)]'
+                                : 'text-secondary hover:text-primary',
                         )}
                     >
                         {r.label}

@@ -49,7 +49,7 @@ export default function AgentPerformance({ leaderboard, channels, agents, filter
                 <Card className="overflow-x-auto">
                     <table className="w-full min-w-[640px] text-sm">
                         <thead>
-                            <tr className="border-b border-default text-[12px] uppercase tracking-wide text-tertiary">
+                            <tr className="border-b border-default bg-surface-2/50 text-[11px] font-semibold uppercase tracking-wider text-tertiary">
                                 <th className="px-4 py-2.5 text-start font-medium">Agent</th>
                                 <th className="px-4 py-2.5 text-end font-medium">Handled</th>
                                 <th className="px-4 py-2.5 text-end font-medium">Avg response</th>

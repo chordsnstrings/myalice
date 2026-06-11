@@ -107,7 +107,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                 {locked ? (
                     <Lock className="size-3.5 text-tertiary" />
                 ) : item.badge ? (
-                    <span className="rounded-full bg-accent px-1.5 text-[11px] font-semibold text-accent-contrast">
+                    <span className="brand-gradient rounded-full px-1.5 text-[11px] font-semibold text-accent-contrast">
                         {item.badge}
                     </span>
                 ) : null}

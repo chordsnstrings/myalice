@@ -25,15 +25,15 @@ export function Table<T extends { id: number | string }>({
     }
 
     return (
-        <div className="overflow-x-auto rounded-[var(--radius-card)] border border-default bg-surface">
+        <div className="overflow-x-auto rounded-[var(--radius-card)] border border-default bg-surface shadow-[var(--shadow-xs)]">
             <table className="w-full min-w-[560px] text-sm">
                 <thead>
-                    <tr className="border-b border-default">
+                    <tr className="border-b border-default bg-surface-2/50">
                         {columns.map((c) => (
                             <th
                                 key={c.key}
                                 className={cn(
-                                    'px-4 py-2.5 text-[12px] font-medium uppercase tracking-wide text-tertiary',
+                                    'px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-tertiary',
                                     c.align === 'end' ? 'text-end' : 'text-start',
                                 )}
                             >
