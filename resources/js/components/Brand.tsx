@@ -6,7 +6,7 @@ export const BRAND_NAME = 'ARKS Messages Platform';
 export function Brand({ className }: { className?: string }) {
     return (
         <div className={cn('flex items-center gap-2.5', className)}>
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-contrast">
+            <div className="brand-gradient glow-accent flex size-7 shrink-0 items-center justify-center rounded-[9px] text-accent-contrast">
                 <span className="text-sm font-bold">A</span>
             </div>
             <div className="leading-none">

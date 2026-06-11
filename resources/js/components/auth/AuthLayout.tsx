@@ -28,7 +28,7 @@ export function AuthLayout({
 
             {/* Proof panel (hidden on small screens) */}
             <div className="relative hidden flex-1 overflow-hidden border-s border-default bg-surface lg:block">
-                <div className="absolute inset-0 bg-gradient-to-br from-accent-subtle via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-br from-accent-subtle via-transparent to-transparent" />
                 <div className="relative flex h-full flex-col justify-center px-16">
                     <p className="max-w-md text-xl font-medium leading-relaxed text-primary">
                         One inbox where conversations become orders — across WhatsApp, Instagram,

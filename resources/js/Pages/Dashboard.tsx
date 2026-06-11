@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { ArrowUpRight, ArrowDownRight, TrendingUp, Sparkles } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, TrendingUp, Sparkles, MessagesSquare, Clock, CircleCheck, Star } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { AppShell } from '@/components/shell/AppShell';
 import { Card } from '@/components/ui/Card';
 import { FilterBar, type AnalyticsFilterState } from '@/components/analytics/FilterBar';
@@ -48,6 +49,8 @@ interface Props {
     filters: AnalyticsFilterState;
 }
 
+const kpiIcons: LucideIcon[] = [MessagesSquare, Clock, CircleCheck, Star];
+
 export default function Dashboard({ kpis, revenueTrend, leaderboard, recovered, channels, agents, ai, filters }: Props) {
     const totalRevenue = revenueTrend.reduce((s, d) => s + d.value, 0);
 
@@ -68,19 +71,25 @@ export default function Dashboard({ kpis, revenueTrend, leaderboard, recovered, 
                     <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
                         {kpis.map((k, i) => {
                             const positive = k.delta >= 0;
+                            const Icon = kpiIcons[i % kpiIcons.length];
                             return (
-                                <Card key={k.label} className="p-4" style={{ '--i': i } as React.CSSProperties}>
-                                    <p className="text-[13px] text-secondary">{k.label}</p>
-                                    <div className="mt-1 flex items-end justify-between">
+                                <Card key={k.label} interactive className="group p-4" style={{ '--i': i } as React.CSSProperties}>
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[13px] text-secondary">{k.label}</p>
+                                        <span className="flex size-7 items-center justify-center rounded-[8px] bg-accent-subtle text-accent">
+                                            <Icon className="icon-pop size-4" />
+                                        </span>
+                                    </div>
+                                    <div className="mt-2 flex items-end justify-between">
                                         <span className="text-2xl font-semibold tracking-tight tnum">{k.value}</span>
                                         {k.delta !== 0 && (
                                             <span
                                                 className={cn(
-                                                    'mb-1 flex items-center gap-0.5 text-[12px] font-medium',
-                                                    positive ? 'text-success' : 'text-danger',
+                                                    'mb-1 flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold',
+                                                    positive ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger',
                                                 )}
                                             >
-                                                {positive ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
+                                                {positive ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
                                                 {Math.abs(k.delta)}%
                                             </span>
                                         )}
@@ -95,7 +104,7 @@ export default function Dashboard({ kpis, revenueTrend, leaderboard, recovered, 
 
                     {/* Revenue + recovered */}
                     <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
-                        <Card className="p-5 lg:col-span-2">
+                        <Card className="flex flex-col p-5 lg:col-span-2">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-[13px] text-secondary">Revenue attributed to chat</p>
@@ -105,12 +114,16 @@ export default function Dashboard({ kpis, revenueTrend, leaderboard, recovered, 
                                     <TrendingUp className="size-3.5" /> chat orders
                                 </div>
                             </div>
-                            <div className="mt-6">
-                                <BarChart data={revenueTrend} format={(v) => money(v)} />
+                            <div className="mt-6 flex-1">
+                                <BarChart data={revenueTrend} format={(v) => money(v)} className="h-full min-h-[140px]" />
                             </div>
                         </Card>
 
-                        <Card className="flex flex-col justify-center p-5">
+                        <Card className="relative flex flex-col justify-center overflow-hidden p-5">
+                            <div className="pointer-events-none absolute -end-8 -top-8 size-32 rounded-full bg-accent-subtle blur-2xl" />
+                            <span className="mb-3 flex size-9 items-center justify-center rounded-[10px] bg-accent-subtle text-accent">
+                                <TrendingUp className="size-5" />
+                            </span>
                             <p className="text-[13px] text-secondary">Abandoned-cart recovered</p>
                             <p className="mt-1 text-3xl font-semibold tracking-tight tnum">{money(recovered)}</p>
                             <p className="mt-3 text-[13px] text-secondary">
@@ -165,10 +178,14 @@ export default function Dashboard({ kpis, revenueTrend, leaderboard, recovered, 
                     </Card>
 
                     {ai && (
-                        <Card className="mt-3 p-5">
+                        <Card className="relative mt-3 overflow-hidden p-5">
+                            <div className="pointer-events-none absolute -start-10 -top-10 size-40 rounded-full bg-accent-subtle blur-3xl" />
                             <div className="mb-4 flex items-center justify-between">
                                 <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-                                    <Sparkles className="size-4 text-accent" /> AI assistant
+                                    <span className="flex size-6 items-center justify-center rounded-md bg-accent-subtle text-accent">
+                                        <Sparkles className="size-3.5" />
+                                    </span>
+                                    AI assistant
                                 </h3>
                                 <Link href="/settings/ai-agents" className="text-[13px] font-medium text-accent hover:underline">
                                     Configure →

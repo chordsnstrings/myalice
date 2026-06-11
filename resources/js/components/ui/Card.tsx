@@ -1,11 +1,17 @@
 import { cn } from '@/lib/utils';
 
-/** Border-led card; no drop shadow on inline cards (A6). */
-export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+    /** Adds a hover-lift + stronger shadow; use for clickable / stat tiles. */
+    interactive?: boolean;
+}
+
+/** Border-led card with a soft resting elevation; opt into `interactive` to lift. */
+export function Card({ className, interactive, ...props }: CardProps) {
     return (
         <div
             className={cn(
-                'rounded-[var(--radius-card)] border border-default bg-surface',
+                'rounded-[var(--radius-card)] border border-default bg-surface shadow-[var(--shadow-xs)]',
+                interactive && 'lift cursor-pointer',
                 className,
             )}
             {...props}

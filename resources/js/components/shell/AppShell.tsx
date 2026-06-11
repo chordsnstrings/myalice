@@ -93,14 +93,16 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
         const locked = !!item.feature && !features.includes(item.feature);
         const className = cn(
             'press group relative flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-start text-[13px] font-medium transition-colors',
-            active ? 'bg-accent-subtle text-accent' : 'text-secondary hover:bg-surface-hover hover:text-primary',
+            active
+                ? 'bg-accent-subtle text-accent shadow-[var(--shadow-xs)]'
+                : 'text-secondary hover:bg-surface-hover hover:text-primary',
         );
         const inner = (
             <>
                 {active && (
-                    <span className="absolute -start-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-e-full bg-accent" />
+                    <span className="brand-gradient absolute -start-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-e-full" />
                 )}
-                <Icon className="size-[18px] shrink-0" />
+                <Icon className="icon-pop size-[18px] shrink-0" />
                 <span className="flex-1">{t(item.key)}</span>
                 {locked ? (
                     <Lock className="size-3.5 text-tertiary" />
@@ -178,7 +180,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                 {/* Top bar — responsive (B2) */}
                 <header className="flex h-14 shrink-0 items-center gap-2 border-b border-default bg-surface px-3 sm:gap-3 sm:px-5">
                     {/* Mobile brand mark */}
-                    <div className="flex size-8 items-center justify-center rounded-lg bg-accent text-sm font-bold text-accent-contrast lg:hidden">
+                    <div className="brand-gradient glow-accent flex size-8 items-center justify-center rounded-[10px] text-sm font-bold text-accent-contrast lg:hidden">
                         A
                     </div>
                     <h1 className="truncate text-sm font-semibold">{title}</h1>
