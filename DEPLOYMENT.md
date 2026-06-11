@@ -38,13 +38,17 @@ QUEUE_CONNECTION=database
 FILESYSTEM_DISK=s3   AWS_* + AWS_ENDPOINT
 BROADCAST_CONNECTION=pusher   PUSHER_*
 AI_HTTP_TIMEOUT=20   (optional; per-call LLM timeout, kept under the 50s worker cap)
+AI_KNOWLEDGE_SEMANTIC=true   (optional; hybrid semantic+keyword knowledge retrieval — set false to force keyword-only)
 ```
 Trust proxies and force HTTPS. **`VITE_*` keys (e.g. `VITE_PUSHER_*`, `VITE_META_APP_ID`)
 are baked in at build time** — set them in CI before `npm run build`, not just on the server.
 Channel tokens are added in-app (Settings → Channels), not in `.env`.
 **AI sales agent (M13):** provider API keys (Anthropic/OpenAI/Gemini/DeepSeek/any
 OpenAI-compatible endpoint) are stored **per workspace, encrypted**, via Settings →
-AI agent — never in `.env`. The only env knob is `AI_HTTP_TIMEOUT`. The server must
+AI agent — never in `.env`. Env knobs are `AI_HTTP_TIMEOUT` and the optional
+`AI_KNOWLEDGE_SEMANTIC` (hybrid retrieval; falls back to keyword-only when off or
+when no embeddings-capable provider — OpenAI/OpenAI-compatible/Gemini — is connected).
+The server must
 allow **outbound HTTPS** to whichever providers your tenants connect (e.g.
 `api.openai.com`, `api.anthropic.com`, `generativelanguage.googleapis.com`, or a
 self-hosted base URL); confirm your egress/firewall policy permits them.
@@ -61,6 +65,7 @@ self-hosted base URL); confirm your egress/firewall policy permits them.
     `templates:sync` (`->everyThirtyMinutes()`, pull WhatsApp template approval statuses),
     `broadcasts:launch-due` (`->everyMinute()`, launch scheduled broadcasts),
     `knowledge:refresh` (`->daily()`, re-fetch website/Facebook agent knowledge),
+    `knowledge:embed` (`->dailyAt('01:10')`, backfill snippet embeddings for semantic retrieval),
     `shopify:sync` (`->everyThirtyMinutes()`, sync connected Shopify catalogs),
     plus daily housekeeping (prune batches, clear resets, prune Sanctum tokens).
     Broadcast sends ride the same queue as paced, resumable `SendBroadcastChunk`

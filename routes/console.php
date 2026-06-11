@@ -30,6 +30,9 @@ Schedule::command('broadcasts:launch-due')->everyMinute()->withoutOverlapping();
 // Keep agent knowledge (website/Facebook) fresh.
 Schedule::command('knowledge:refresh')->daily()->withoutOverlapping();
 
+// Backfill embeddings for snippets still missing one (manual / pre-existing rows).
+Schedule::command('knowledge:embed')->dailyAt('01:10')->withoutOverlapping();
+
 // Sync connected Shopify catalogs into local products.
 Schedule::command('shopify:sync')->everyThirtyMinutes()->withoutOverlapping();
 

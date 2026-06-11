@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Ai\Embedder;
 use App\Models\Channel;
 use App\Models\KnowledgeSnippet;
 use App\Models\KnowledgeSource;
@@ -48,6 +49,7 @@ class FetchKnowledgeSource implements ShouldQueue
                     : $this->fetchWebsite((string) $source->url);
 
                 $this->replaceSnippets($source, $text);
+                app(Embedder::class)->embedSnippets($source);
                 $source->update(['status' => 'fetched', 'last_fetched_at' => now(), 'error' => null]);
             } catch (Throwable $e) {
                 $source->update(['status' => 'error', 'error' => mb_substr($e->getMessage(), 0, 250)]);

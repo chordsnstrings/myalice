@@ -16,6 +16,18 @@ return [
         'chunk_chars' => (int) env('AI_KNOWLEDGE_CHUNK_CHARS', 800),
         'fetch_timeout' => (int) env('AI_KNOWLEDGE_FETCH_TIMEOUT', 10),
         'max_snippets_per_source' => (int) env('AI_KNOWLEDGE_MAX_PER_SOURCE', 40),
+
+        // Hybrid semantic retrieval: embed snippets at ingest + the query at reply
+        // time, blending cosine similarity with keyword overlap. Falls back to
+        // keyword-only when disabled or no embeddings provider is connected.
+        'semantic' => (bool) env('AI_KNOWLEDGE_SEMANTIC', true),
+        'semantic_weight' => (float) env('AI_KNOWLEDGE_SEMANTIC_WEIGHT', 0.7),
+        'embed_timeout' => (int) env('AI_KNOWLEDGE_EMBED_TIMEOUT', 15),
+        'embedding_models' => [
+            'openai' => env('AI_EMBED_MODEL_OPENAI', 'text-embedding-3-small'),
+            'openai_compatible' => env('AI_EMBED_MODEL_OPENAI_COMPATIBLE', 'text-embedding-3-small'),
+            'gemini' => env('AI_EMBED_MODEL_GEMINI', 'text-embedding-004'),
+        ],
     ],
 
     // Wall-clock budget for the whole agent run (seconds) — fits the cron worker.

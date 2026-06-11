@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Ai\Embedder;
 use App\Jobs\FetchKnowledgeSource;
 use App\Models\AiAgent;
 use App\Models\KnowledgeSnippet;
@@ -48,6 +49,7 @@ class KnowledgeController extends Controller
                     'content' => $chunk, 'char_count' => mb_strlen($chunk),
                 ]);
             }
+            app(Embedder::class)->embedSnippets($source);
             $source->update(['last_fetched_at' => now()]);
         } else {
             FetchKnowledgeSource::dispatch($ws->id, $source->id);
