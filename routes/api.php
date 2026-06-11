@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\ContactApiController;
 use App\Http\Controllers\Api\ConversationApiController;
 use App\Http\Controllers\Webhooks\InstagramWebhookController;
 use App\Http\Controllers\Webhooks\MessengerWebhookController;
+use App\Http\Controllers\Webhooks\ShopifyWebhookController;
 use App\Http\Controllers\Webhooks\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +20,10 @@ Route::post('/webhooks/messenger', [MessengerWebhookController::class, 'handle']
 
 Route::get('/webhooks/instagram', [InstagramWebhookController::class, 'verify']);
 Route::post('/webhooks/instagram', [InstagramWebhookController::class, 'handle']);
+
+// Shopify webhooks (HMAC-verified): keep stock + order status in sync.
+Route::post('/webhooks/shopify/products', [ShopifyWebhookController::class, 'product']);
+Route::post('/webhooks/shopify/orders', [ShopifyWebhookController::class, 'order']);
 
 /*
 | Developer REST API (M19 / B11.7). Sanctum token auth, scoped to the token's

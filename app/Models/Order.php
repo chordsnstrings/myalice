@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $workspace_id
  * @property int|null $contact_id
  * @property string $number
+ * @property string|null $external_id
+ * @property string|null $external_status
  * @property numeric-string $subtotal
  * @property string|null $discount_type
  * @property numeric-string $discount_amount
@@ -27,7 +29,7 @@ class Order extends Model
     use BelongsToWorkspace;
 
     /** @var list<string> */
-    protected $fillable = ['workspace_id', 'contact_id', 'number', 'subtotal', 'discount_type', 'discount_amount', 'shipping_amount', 'total', 'currency', 'status', 'source', 'line_items'];
+    protected $fillable = ['workspace_id', 'contact_id', 'number', 'external_id', 'external_status', 'subtotal', 'discount_type', 'discount_amount', 'shipping_amount', 'total', 'currency', 'status', 'source', 'line_items'];
 
     /** @return array<string, string> */
     protected function casts(): array

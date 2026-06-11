@@ -5,10 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\StoreConnection;
+use App\Services\ShopifyCatalogSync;
+use App\Services\ShopifyClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class CommerceController extends Controller
 {
@@ -48,7 +52,43 @@ class CommerceController extends Controller
         return Inertia::render('Commerce/Products', [
             'products' => $products,
             'store' => $this->store(),
+            'shopify_connected' => (new ShopifyClient)->connected(),
         ]);
+    }
+
+    /** Connect a Shopify store — verifies the token with a live products call. */
+    public function connectStore(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'store_url' => ['required', 'string', 'max:255'],
+            'access_token' => ['required', 'string'],
+        ]);
+
+        $store = StoreConnection::updateOrCreate(
+            ['platform' => 'shopify'],
+            ['store_url' => $data['store_url'], 'credentials' => ['access_token' => $data['access_token'], 'api_version' => '2025-01'], 'status' => 'pending'],
+        );
+
+        try {
+            (new ShopifyClient)->products(); // throws on bad credentials
+        } catch (Throwable $e) {
+            $store->update(['status' => 'error']);
+            throw ValidationException::withMessages(['access_token' => "Couldn't reach Shopify with those details."]);
+        }
+
+        $count = (new ShopifyCatalogSync(new ShopifyClient))->sync();
+        $store->update(['status' => 'connected', 'last_synced_at' => now()]);
+
+        return back()->with('success', "Shopify connected — synced {$count} product(s).");
+    }
+
+    /** Re-sync the Shopify catalog now. */
+    public function syncStore(): RedirectResponse
+    {
+        $count = (new ShopifyCatalogSync(new ShopifyClient))->sync();
+        StoreConnection::where('platform', 'shopify')->update(['last_synced_at' => now()]);
+
+        return back()->with('success', "Synced {$count} product(s).");
     }
 
     /** Mark a catalog item as a product or a service (drives the AI's service discount). */

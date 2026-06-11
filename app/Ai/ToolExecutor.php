@@ -2,6 +2,7 @@
 
 namespace App\Ai;
 
+use App\Jobs\PlaceShopifyOrder;
 use App\Models\AiAction;
 use App\Models\AiAgent;
 use App\Models\Conversation;
@@ -9,6 +10,7 @@ use App\Models\Message;
 use App\Models\Order;
 use App\Models\Product;
 use App\Services\RoutingService;
+use App\Services\ShopifyClient;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -145,7 +147,7 @@ class ToolExecutor
             }
             $total += (float) $product->price * $qty; // price from DB, never the model
             $currency = $product->currency;
-            $lines[] = ['title' => $product->title, 'qty' => $qty, 'price' => (float) $product->price, 'type' => $product->type];
+            $lines[] = ['title' => $product->title, 'qty' => $qty, 'price' => (float) $product->price, 'type' => $product->type, 'external_id' => $product->external_id];
         }
 
         $subtotal = round($total, 2);
@@ -180,6 +182,12 @@ class ToolExecutor
             'source' => 'chat',
             'line_items' => $lines,
         ]);
+
+        // Mirror to Shopify (async) when a store is connected — never blocks the reply.
+        if (app(ShopifyClient::class)->connected()) {
+            $order->update(['external_status' => 'pending']);
+            PlaceShopifyOrder::dispatch($order->workspace_id, $order->id);
+        }
 
         $summary = collect($lines)->map(fn ($l) => "{$l['qty']}× {$l['title']}")->implode(', ');
         $discountNote = $discountAmount > 0 ? ' (−'.round($discountAmount, 2)." {$currency})" : '';

@@ -30,6 +30,9 @@ Schedule::command('broadcasts:launch-due')->everyMinute()->withoutOverlapping();
 // Keep agent knowledge (website/Facebook) fresh.
 Schedule::command('knowledge:refresh')->daily()->withoutOverlapping();
 
+// Sync connected Shopify catalogs into local products.
+Schedule::command('shopify:sync')->everyThirtyMinutes()->withoutOverlapping();
+
 // Housekeeping kept light to respect shared-CPU limits.
 Schedule::command('queue:prune-batches --hours=48')->daily();
 Schedule::command('auth:clear-resets')->daily();
