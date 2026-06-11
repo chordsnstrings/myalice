@@ -17,6 +17,7 @@ use App\Http\Controllers\Reports\CsatReportController;
 use App\Http\Controllers\Reports\SalesReportController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TemplateController;
+use App\Http\Controllers\WorkspaceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -112,9 +113,15 @@ Route::middleware(['auth', 'workspace'])->group(function () {
         Route::post('/store/sync', [CommerceController::class, 'syncStore'])->name('store.sync');
     });
 
+    // Workspace switching + creation (multi-workspace membership).
+    Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
+    Route::post('/workspaces/{workspace}/switch', [WorkspaceController::class, 'switch'])->name('workspaces.switch');
+
     // Settings cluster
     Route::get('/settings', [SettingsController::class, 'workspace'])->name('settings');
     Route::get('/settings/team', [SettingsController::class, 'team'])->middleware('can:manage-team')->name('settings.team');
+    Route::post('/settings/team', [SettingsController::class, 'addMember'])->middleware('can:manage-team')->name('settings.team.add');
+    Route::delete('/settings/team/{member}', [SettingsController::class, 'removeMember'])->middleware('can:manage-team')->name('settings.team.remove');
     Route::get('/settings/content', [SettingsController::class, 'content'])->name('settings.content');
     Route::get('/settings/hours', [SettingsController::class, 'hours'])->name('settings.hours');
     // Channel config exposes webhook verify tokens — restrict to channel managers.

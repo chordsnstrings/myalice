@@ -40,6 +40,13 @@ class HandleInertiaRequests extends Middleware
                     'wallet_balance' => (float) $workspace->wallet_balance,
                     'currency' => $workspace->currency,
                 ] : null,
+                'workspaces' => $user
+                    ? $user->workspaces()->orderBy('name')->get()->map(fn ($w) => [
+                        'id' => $w->id,
+                        'name' => $w->name,
+                        'role' => $w->getAttribute('pivot')->workspace_role,
+                    ])->values()
+                    : [],
                 'can' => $user ? [
                     'manage_billing' => $user->can('manage-billing'),
                     'manage_team' => $user->can('manage-team'),

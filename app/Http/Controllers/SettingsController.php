@@ -10,6 +10,11 @@ use App\Models\Tag;
 use App\Models\User;
 use App\Models\WalletTransaction;
 use App\Support\Tenancy;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,14 +35,16 @@ class SettingsController extends Controller
         ]);
     }
 
-    /** Team & roles (B11.2). */
+    /** Team & roles (B11.2) — scoped to the current workspace's members. */
     public function team(): Response
     {
-        $members = User::orderBy('name')->get()->map(fn (User $u) => [
+        $ws = Tenancy::currentOrFail();
+
+        $members = $ws->members()->orderBy('name')->get()->map(fn (User $u) => [
             'id' => $u->id,
             'name' => $u->name,
             'email' => $u->email,
-            'role' => $u->workspace_role,
+            'role' => $u->getAttribute('pivot')->workspace_role,
             'status' => 'active',
         ]);
 
@@ -45,6 +52,63 @@ class SettingsController extends Controller
             'members' => $members,
             'subscription' => $this->subscription(),
         ]);
+    }
+
+    /** Add a teammate to the current workspace (existing user or a new one). */
+    public function addMember(Request $request): RedirectResponse
+    {
+        $ws = Tenancy::currentOrFail();
+
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'name' => ['nullable', 'string', 'max:255'],
+            'role' => ['required', Rule::in(['owner', 'manager', 'agent', 'developer'])],
+        ]);
+
+        $user = User::firstWhere('email', $data['email']);
+        if (! $user) {
+            $user = User::create([
+                'name' => $data['name'] ?: (string) strtok($data['email'], '@'),
+                'email' => $data['email'],
+                'password' => Hash::make(Str::random(40)),
+                'workspace_id' => $ws->id,
+                'workspace_role' => $data['role'],
+            ]);
+        }
+
+        if ($ws->members()->whereKey($user->id)->exists()) {
+            return back()->withErrors(['email' => 'Already a member of this workspace.']);
+        }
+
+        $ws->members()->attach($user->id, ['workspace_role' => $data['role']]);
+
+        return back()->with('success', "{$user->name} was added.");
+    }
+
+    /** Remove a teammate from the current workspace. */
+    public function removeMember(Request $request, User $member): RedirectResponse
+    {
+        $ws = Tenancy::currentOrFail();
+        abort_unless($ws->members()->whereKey($member->id)->exists(), 404);
+        abort_if($member->id === $request->user()->id, 403, "You can't remove yourself.");
+
+        $isOwner = $ws->members()->whereKey($member->id)->first()->getAttribute('pivot')->workspace_role === 'owner';
+        if ($isOwner && $ws->members()->wherePivot('workspace_role', 'owner')->count() <= 1) {
+            return back()->withErrors(['member' => 'A workspace needs at least one owner.']);
+        }
+
+        $ws->members()->detach($member->id);
+
+        // If this was their active workspace, move them to another membership.
+        if ($member->workspace_id === $ws->id) {
+            $next = $member->workspaces()->first();
+            $member->update([
+                'workspace_id' => $next?->id,
+                'workspace_role' => $next ? $next->getAttribute('pivot')->workspace_role : 'agent',
+            ]);
+        }
+
+        return back()->with('success', "{$member->name} was removed.");
     }
 
     /** Quick replies & tags (B11.4). */

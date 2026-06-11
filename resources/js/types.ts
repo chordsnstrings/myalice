@@ -24,8 +24,20 @@ export interface Capabilities {
     manage_bots?: boolean;
 }
 
+export interface WorkspaceMembership {
+    id: number;
+    name: string;
+    role: 'owner' | 'manager' | 'agent' | 'developer';
+}
+
 export interface PageProps {
-    auth: { user: SharedAuthUser | null; workspace: SharedWorkspace | null; can: Capabilities; features: string[] };
+    auth: {
+        user: SharedAuthUser | null;
+        workspace: SharedWorkspace | null;
+        workspaces: WorkspaceMembership[];
+        can: Capabilities;
+        features: string[];
+    };
     flash: { success?: string; error?: string };
     locale: string;
     translations?: Record<string, string>;

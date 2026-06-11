@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -57,8 +58,34 @@ class User extends Authenticatable
     }
 
     /**
-     * The active workspace for this user. Single-workspace membership for now;
-     * a session override can be layered on for multi-workspace switching.
+     * Every workspace this user is a member of (role carried on the pivot).
+     *
+     * @return BelongsToMany<Workspace, $this>
+     */
+    public function workspaces(): BelongsToMany
+    {
+        return $this->belongsToMany(Workspace::class, 'workspace_user')
+            ->withPivot('workspace_role')
+            ->withTimestamps();
+    }
+
+    /** Whether the user is a member of the given workspace. */
+    public function isMemberOf(int $workspaceId): bool
+    {
+        return $this->workspaces()->whereKey($workspaceId)->exists();
+    }
+
+    /** The user's role in the given workspace, or null if not a member. */
+    public function roleIn(int $workspaceId): ?string
+    {
+        $ws = $this->workspaces()->whereKey($workspaceId)->first();
+
+        return $ws?->getAttribute('pivot')?->workspace_role;
+    }
+
+    /**
+     * The active workspace for this user. `workspace_id` is updated by the
+     * workspace switcher; membership is governed by the workspaces() pivot.
      */
     public function getCurrentWorkspaceAttribute(): ?Workspace
     {

@@ -64,13 +64,17 @@ class AuthController extends Controller
                 'wallet_balance' => 50,
             ]);
 
-            return User::create([
+            $user = User::create([
                 'workspace_id' => $workspace->id,
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
                 'workspace_role' => 'owner',
             ]);
+
+            $workspace->members()->attach($user->id, ['workspace_role' => 'owner']);
+
+            return $user;
         });
 
         Auth::login($user);

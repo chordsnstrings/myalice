@@ -34,6 +34,7 @@ import { Switch } from '@/components/ui/Switch';
 import { useToast } from '@/components/ui/Toast';
 import { CommandPalette } from './CommandPalette';
 import { OfflineBanner } from './OfflineBanner';
+import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { Brand } from '@/components/Brand';
 import { onInstallAvailability, promptInstall } from '@/lib/pwa';
 import type { PageProps } from '@/types';
@@ -140,8 +141,8 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
 
             {/* Desktop nav rail (B2) */}
             <aside className="hidden w-[228px] shrink-0 flex-col border-e border-default bg-surface lg:flex">
-                <div className="flex h-14 items-center px-5">
-                    <Brand />
+                <div className="flex h-14 items-center px-3">
+                    <WorkspaceSwitcher />
                 </div>
 
                 <nav className="flex-1 space-y-0.5 px-3 py-2">
