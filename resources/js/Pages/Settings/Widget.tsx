@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { Copy, MessageSquare } from 'lucide-react';
 import { SettingsLayout } from '@/components/settings/SettingsLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
+import type { PageProps } from '@/types';
 
 export default function Widget({ workspace_id }: { workspace_id: number; whatsapp: string | null }) {
     const { toast } = useToast();
+    const { props } = usePage<PageProps>();
+    const brand = props.auth.workspace?.name ?? 'Your brand';
     const [greeting, setGreeting] = useState('Hi 👋 How can we help?');
     const snippet = `<script src="https://cdn.arksmessages.com/widget.js" data-workspace="${workspace_id}" async></script>`;
 
@@ -52,7 +55,7 @@ export default function Widget({ workspace_id }: { workspace_id: number; whatsap
                         <div className="overflow-hidden rounded-[var(--radius-card)] border border-default bg-surface shadow-[var(--shadow-sm)]">
                             <div className="flex items-center gap-2 bg-accent px-4 py-3 text-accent-contrast">
                                 <MessageSquare className="size-4" />
-                                <span className="text-[13px] font-semibold">Acme DTC</span>
+                                <span className="text-[13px] font-semibold">{brand}</span>
                             </div>
                             <div className="space-y-2 p-3">
                                 <div className="max-w-[80%] rounded-[var(--radius-card)] border border-default bg-surface px-3 py-2 text-[12px]">{greeting}</div>

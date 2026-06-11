@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
         $this->call(RolesAndPermissionsSeeder::class);
 
         $workspace = Workspace::firstOrCreate(
-            ['name' => 'Acme DTC'],
+            ['name' => 'ARKS DTC'],
             ['plan' => 'business', 'wallet_balance' => 128.50, 'currency' => 'USD', 'timezone' => 'Asia/Dubai'],
         );
 
@@ -63,11 +63,11 @@ class DatabaseSeeder extends Seeder
         }
 
         Channel::insert(array_map(fn ($c) => array_merge($c, ['workspace_id' => $workspace->id, 'created_at' => now(), 'updated_at' => now()]), [
-            ['type' => 'whatsapp', 'name' => 'Acme WhatsApp', 'external_id' => '100000000000001', 'status' => 'connected'],
-            ['type' => 'instagram', 'name' => '@acme', 'external_id' => '200000000000002', 'status' => 'connected'],
-            ['type' => 'messenger', 'name' => 'Acme Page', 'external_id' => '300000000000003', 'status' => 'connected'],
+            ['type' => 'whatsapp', 'name' => 'ARKS WhatsApp', 'external_id' => '100000000000001', 'status' => 'connected'],
+            ['type' => 'instagram', 'name' => '@arks', 'external_id' => '200000000000002', 'status' => 'connected'],
+            ['type' => 'messenger', 'name' => 'ARKS Page', 'external_id' => '300000000000003', 'status' => 'connected'],
             ['type' => 'web', 'name' => 'Storefront widget', 'external_id' => null, 'status' => 'connected'],
-            ['type' => 'telegram', 'name' => 'Acme Bot', 'external_id' => null, 'status' => 'action_needed'],
+            ['type' => 'telegram', 'name' => 'ARKS Bot', 'external_id' => null, 'status' => 'action_needed'],
         ]));
 
         foreach (['VIP' => 'info', 'Returning' => 'neutral', 'Lead' => 'accent', 'Wholesale' => 'warning'] as $name => $color) {
@@ -82,7 +82,7 @@ class DatabaseSeeder extends Seeder
             QuickReply::create(['shortcut' => $s, 'body' => $b]);
         }
 
-        StoreConnection::create(['platform' => 'shopify', 'store_url' => 'acme.myshopify.com', 'status' => 'connected', 'last_synced_at' => now()->subMinutes(8)]);
+        StoreConnection::create(['platform' => 'shopify', 'store_url' => 'arks.myshopify.com', 'status' => 'connected', 'last_synced_at' => now()->subMinutes(8)]);
 
         $products = collect([
             ['Linen Abaya — Navy', 84, 24], ['Silk Hijab — Rose', 29, 120], ['Cotton Kaftan — Sand', 65, 0],
