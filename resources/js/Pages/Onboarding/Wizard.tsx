@@ -48,8 +48,12 @@ export default function Wizard() {
                                 >
                                     <span
                                         className={cn(
-                                            'flex size-6 items-center justify-center rounded-full border',
-                                            isDone ? 'border-success bg-success text-white' : isCurrent ? 'border-accent text-accent' : 'border-strong text-tertiary',
+                                            'flex size-6 items-center justify-center rounded-full border transition-all',
+                                            isDone
+                                                ? 'border-transparent bg-success text-white'
+                                                : isCurrent
+                                                  ? 'brand-gradient glow-accent border-transparent text-accent-contrast'
+                                                  : 'border-strong text-tertiary',
                                         )}
                                     >
                                         {isDone ? <Check className="size-3.5" /> : <Icon className="size-3.5" />}
@@ -80,15 +84,42 @@ export default function Wizard() {
                     </p>
 
                     <div className="mt-7 space-y-3">
+                        {step === 0 && (
+                            <div className="grid gap-3 sm:grid-cols-3">
+                                {[
+                                    { icon: MessageCircle, title: 'One inbox', text: 'Every channel in a single, fast inbox.' },
+                                    { icon: Store, title: 'Commerce-aware', text: 'See orders and catalog inline.' },
+                                    { icon: Sparkles, title: 'AI that sells', text: 'Auto-replies that close sales.' },
+                                ].map((f) => (
+                                    <div key={f.title} className="rounded-[var(--radius-card)] border border-default bg-surface p-4 shadow-[var(--shadow-xs)]">
+                                        <span className="brand-gradient glow-accent mb-3 flex size-9 items-center justify-center rounded-[10px] text-accent-contrast">
+                                            <f.icon className="size-5" />
+                                        </span>
+                                        <p className="text-[13px] font-semibold">{f.title}</p>
+                                        <p className="mt-0.5 text-[12px] text-secondary">{f.text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         {step === 1 &&
-                            ['WhatsApp', 'Instagram', 'Messenger', 'Telegram'].map((c) => (
+                            ([
+                                ['WhatsApp', 'bg-ch-whatsapp'],
+                                ['Instagram', 'bg-ch-instagram'],
+                                ['Messenger', 'bg-ch-messenger'],
+                                ['Telegram', 'bg-ch-telegram'],
+                            ] as const).map(([c, tile]) => (
                                 <button
                                     key={c}
                                     onClick={() => complete('channel')}
-                                    className="flex w-full items-center justify-between rounded-[var(--radius-card)] border border-default bg-surface px-4 py-3 text-sm font-medium transition-colors hover:border-strong"
+                                    className="lift group flex w-full items-center gap-3 rounded-[var(--radius-card)] border border-default bg-surface px-4 py-3 text-sm font-medium shadow-[var(--shadow-xs)]"
                                 >
-                                    {c}
-                                    <span className="text-[13px] font-medium text-accent">Connect</span>
+                                    <span className={cn('flex size-8 items-center justify-center rounded-[9px] text-[13px] font-bold text-white', tile)}>
+                                        {c[0]}
+                                    </span>
+                                    <span className="flex-1 text-start">{c}</span>
+                                    <span className="flex items-center gap-1 text-[13px] font-medium text-accent">
+                                        Connect <ArrowRight className="icon-pop size-3.5" />
+                                    </span>
                                 </button>
                             ))}
                         {step === 2 &&
@@ -96,10 +127,15 @@ export default function Wizard() {
                                 <button
                                     key={c}
                                     onClick={() => complete('store')}
-                                    className="flex w-full items-center justify-between rounded-[var(--radius-card)] border border-default bg-surface px-4 py-3 text-sm font-medium transition-colors hover:border-strong"
+                                    className="lift group flex w-full items-center gap-3 rounded-[var(--radius-card)] border border-default bg-surface px-4 py-3 text-sm font-medium shadow-[var(--shadow-xs)]"
                                 >
-                                    {c}
-                                    <span className="text-[13px] font-medium text-accent">Connect</span>
+                                    <span className="flex size-8 items-center justify-center rounded-[9px] bg-accent-subtle text-accent">
+                                        <Store className="size-4" />
+                                    </span>
+                                    <span className="flex-1 text-start">{c}</span>
+                                    <span className="flex items-center gap-1 text-[13px] font-medium text-accent">
+                                        Connect <ArrowRight className="icon-pop size-3.5" />
+                                    </span>
                                 </button>
                             ))}
                         {step === 3 && (

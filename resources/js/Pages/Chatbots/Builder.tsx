@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Input, Textarea } from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +36,21 @@ interface Node {
     y: number;
 }
 
+const NODE_W = 200;
+const NODE_H = 58;
+
+/** Subtle per-type colour so the flow reads at a glance. */
+const typeStyle: Record<string, string> = {
+    start: 'bg-success-subtle text-success',
+    message: 'bg-info-subtle text-info',
+    question: 'bg-accent-subtle text-accent',
+    buttons: 'bg-accent-subtle text-accent',
+    condition: 'bg-warning-subtle text-warning',
+    action: 'bg-info-subtle text-info',
+    product: 'bg-success-subtle text-success',
+    handoff: 'bg-danger-subtle text-danger',
+};
+
 const initialNodes: Node[] = [
     { id: 'n1', type: 'start', label: 'Start', x: 40, y: 40 },
     { id: 'n2', type: 'message', label: 'Welcome message', x: 40, y: 130 },
@@ -42,6 +58,35 @@ const initialNodes: Node[] = [
     { id: 'n4', type: 'condition', label: 'Order status?', x: 320, y: 240 },
     { id: 'n5', type: 'handoff', label: 'Handoff to agent', x: 320, y: 360 },
 ];
+
+const edges: [string, string][] = [
+    ['n1', 'n2'],
+    ['n2', 'n3'],
+    ['n3', 'n4'],
+    ['n4', 'n5'],
+];
+
+/** Smooth connector path between two nodes, choosing vertical or side ports. */
+function connector(a: Node, b: Node): string {
+    const ac = { x: a.x + NODE_W / 2, y: a.y + NODE_H / 2 };
+    const bc = { x: b.x + NODE_W / 2, y: b.y + NODE_H / 2 };
+    const vertical = Math.abs(bc.x - ac.x) < NODE_W && bc.y > ac.y;
+    if (vertical) {
+        const sx = ac.x;
+        const sy = a.y + NODE_H;
+        const tx = bc.x;
+        const ty = b.y;
+        const dy = (ty - sy) / 2;
+        return `M ${sx} ${sy} C ${sx} ${sy + dy} ${tx} ${ty - dy} ${tx} ${ty}`;
+    }
+    const toRight = bc.x > ac.x;
+    const sx = toRight ? a.x + NODE_W : a.x;
+    const sy = ac.y;
+    const tx = toRight ? b.x : b.x + NODE_W;
+    const ty = bc.y;
+    const dx = (tx - sx) / 2;
+    return `M ${sx} ${sy} C ${sx + dx} ${sy} ${tx - dx} ${ty} ${tx} ${ty}`;
+}
 
 export default function Builder({ bot }: { bot: { id: number; name: string; status: string } }) {
     const { toast } = useToast();
@@ -89,9 +134,11 @@ export default function Builder({ bot }: { bot: { id: number; name: string; stat
                             <div
                                 key={p.id}
                                 draggable
-                                className="flex cursor-grab items-center gap-2.5 rounded-[var(--radius-control)] border border-default bg-canvas px-2.5 py-2 text-[13px] font-medium text-secondary transition-colors hover:border-strong hover:text-primary active:cursor-grabbing"
+                                className="press group flex cursor-grab items-center gap-2.5 rounded-[var(--radius-control)] border border-default bg-canvas px-2.5 py-2 text-[13px] font-medium text-secondary transition-all hover:border-strong hover:text-primary hover:shadow-[var(--shadow-xs)] active:cursor-grabbing"
                             >
-                                <Icon className="size-4 text-accent" />
+                                <span className={cn('flex size-6 items-center justify-center rounded-md', typeStyle[p.id] ?? 'bg-accent-subtle text-accent')}>
+                                    <Icon className="icon-pop size-3.5" />
+                                </span>
                                 {p.label}
                             </div>
                         );
@@ -107,26 +154,47 @@ export default function Builder({ bot }: { bot: { id: number; name: string; stat
                     }}
                 >
                     <svg className="pointer-events-none absolute inset-0 size-full">
-                        <line x1="120" y1="80" x2="120" y2="130" stroke="var(--border-strong)" strokeWidth="2" />
-                        <line x1="120" y1="172" x2="120" y2="240" stroke="var(--border-strong)" strokeWidth="2" />
-                        <line x1="240" y1="262" x2="320" y2="262" stroke="var(--border-strong)" strokeWidth="2" />
-                        <line x1="400" y1="282" x2="400" y2="360" stroke="var(--border-strong)" strokeWidth="2" />
+                        <defs>
+                            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                                <path d="M1,1 L6,4 L1,7" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </marker>
+                        </defs>
+                        {edges.map(([from, to]) => {
+                            const a = initialNodes.find((n) => n.id === from);
+                            const b = initialNodes.find((n) => n.id === to);
+                            if (!a || !b) return null;
+                            return (
+                                <path
+                                    key={`${from}-${to}`}
+                                    d={connector(a, b)}
+                                    fill="none"
+                                    stroke="var(--accent)"
+                                    strokeWidth="2"
+                                    strokeOpacity="0.55"
+                                    markerEnd="url(#arrow)"
+                                />
+                            );
+                        })}
                     </svg>
                     {initialNodes.map((n) => {
                         const item = palette.find((p) => p.id === n.type);
                         const Icon = item?.icon ?? Play;
+                        const active = selected === n.id;
                         return (
                             <button
                                 key={n.id}
                                 onClick={() => setSelected(n.id)}
-                                style={{ left: n.x, top: n.y }}
+                                style={{ left: n.x, top: n.y, width: NODE_W }}
                                 className={cn(
-                                    'absolute flex w-[200px] items-center gap-2.5 rounded-[var(--radius-card)] border bg-surface px-3 py-2.5 text-start shadow-[var(--shadow-sm)] transition-all',
-                                    selected === n.id ? 'border-accent ring-2 ring-accent/30' : 'border-default hover:border-strong',
+                                    'lift group absolute flex items-center gap-2.5 rounded-[var(--radius-card)] border bg-surface px-3 py-2.5 text-start shadow-[var(--shadow-sm)]',
+                                    active ? 'border-accent ring-2 ring-accent/30' : 'border-default',
                                 )}
                             >
-                                <span className={cn('flex size-7 items-center justify-center rounded-md', n.type === 'start' ? 'bg-success-subtle text-success' : 'bg-accent-subtle text-accent')}>
-                                    <Icon className="size-4" />
+                                {/* connection ports */}
+                                <span className="absolute -top-1 left-1/2 size-2 -translate-x-1/2 rounded-full border-2 border-surface bg-strong" />
+                                <span className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rounded-full border-2 border-surface bg-strong" />
+                                <span className={cn('flex size-7 items-center justify-center rounded-md', typeStyle[n.type] ?? 'bg-accent-subtle text-accent')}>
+                                    <Icon className="icon-pop size-4" />
                                 </span>
                                 <div className="min-w-0">
                                     <p className="truncate text-[13px] font-medium">{n.label}</p>
@@ -144,23 +212,15 @@ export default function Builder({ bot }: { bot: { id: number; name: string; stat
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Selected node</p>
                             <h3 className="mt-1 text-sm font-semibold capitalize">{node.type}</h3>
                             <div className="mt-4 space-y-3">
-                                <div>
-                                    <label className="mb-1 block text-[12px] font-medium">Label</label>
-                                    <input
-                                        defaultValue={node.label}
-                                        className="h-9 w-full rounded-[var(--radius-control)] border border-strong bg-canvas px-3 text-[13px] outline-none focus:border-accent"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="mb-1 block text-[12px] font-medium">Message text</label>
-                                    <textarea
-                                        rows={4}
-                                        defaultValue="Hi 👋 Welcome to Acme. How can we help today?"
-                                        className="w-full resize-none rounded-[var(--radius-control)] border border-strong bg-canvas p-2.5 text-[13px] outline-none focus:border-accent"
-                                    />
-                                </div>
-                                <div className="rounded-[var(--radius-control)] bg-warning-subtle px-3 py-2 text-[12px] text-warning">
-                                    Every Question/Buttons node needs a fallback (re-ask or handoff).
+                                <Input label="Label" defaultValue={node.label} key={node.id + '-label'} />
+                                <Textarea
+                                    label="Message text"
+                                    rows={4}
+                                    defaultValue="Hi 👋 Welcome to Acme. How can we help today?"
+                                    key={node.id + '-text'}
+                                />
+                                <div className="flex items-start gap-2 rounded-[var(--radius-control)] border border-warning/30 bg-warning-subtle px-3 py-2 text-[12px] text-warning">
+                                    <span>Every Question/Buttons node needs a fallback (re-ask or handoff).</span>
                                 </div>
                             </div>
                         </>
