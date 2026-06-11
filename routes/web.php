@@ -15,6 +15,7 @@ use App\Http\Controllers\KnowledgeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Reports\AgentPerformanceController;
 use App\Http\Controllers\Reports\CsatReportController;
+use App\Http\Controllers\Reports\OperationsReportController;
 use App\Http\Controllers\Reports\SalesReportController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TemplateController;
@@ -62,6 +63,7 @@ Route::middleware(['auth', 'workspace'])->group(function () {
 
     // Manager reports (B10.2–B10.4)
     Route::middleware('can:manage-team')->prefix('reports')->name('reports.')->group(function () {
+        Route::get('/operations', [OperationsReportController::class, 'index'])->name('operations');
         Route::get('/agents', [AgentPerformanceController::class, 'index'])->name('agents');
         Route::get('/agents/{agent}', [AgentPerformanceController::class, 'show'])->name('agents.show');
         Route::get('/sales', [SalesReportController::class, 'index'])->name('sales');

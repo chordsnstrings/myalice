@@ -9,6 +9,7 @@ import {
     Workflow,
     ShoppingBag,
     BarChart3,
+    Activity,
     Gauge,
     DollarSign,
     Star,
@@ -41,6 +42,7 @@ import type { PageProps } from '@/types';
 
 interface NavItem {
     key: string;
+    label?: string;
     href: string;
     icon: React.ComponentType<{ className?: string }>;
     badge?: number;
@@ -59,6 +61,7 @@ const nav: NavItem[] = [
 ];
 
 const reportsNav: NavItem[] = [
+    { key: 'nav.operations', label: 'Operations', href: '/reports/operations', icon: Activity, managerOnly: true },
     { key: 'nav.agents', href: '/reports/agents', icon: Gauge, managerOnly: true },
     { key: 'nav.sales', href: '/reports/sales', icon: DollarSign, managerOnly: true },
     { key: 'nav.csat', href: '/reports/csat', icon: Star, managerOnly: true },
@@ -104,7 +107,7 @@ export function AppShell({ title, children }: { title?: string; children: ReactN
                     <span className="brand-gradient absolute -start-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-e-full" />
                 )}
                 <Icon className="icon-pop size-[18px] shrink-0" />
-                <span className="flex-1">{t(item.key)}</span>
+                <span className="flex-1">{t(item.key, item.label)}</span>
                 {locked ? (
                     <Lock className="size-3.5 text-tertiary" />
                 ) : item.badge ? (

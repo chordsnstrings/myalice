@@ -9,11 +9,12 @@ import { Button } from '@/components/ui/Button';
 import { Tabs } from '@/components/ui/Tabs';
 import { FilterBar, type AnalyticsFilterState } from '@/components/analytics/FilterBar';
 import { LineChart } from '@/components/analytics/LineChart';
-import { relativeTime } from '@/lib/utils';
+import { cn, relativeTime } from '@/lib/utils';
 
 interface Report {
     average: number;
     responses: number;
+    distribution: { rating: number; count: number }[];
     trend: { day: string; value: number }[];
     by_agent: { name: string; average: number; count: number }[];
     by_channel: { channel: string; average: number; count: number }[];
@@ -59,6 +60,21 @@ export default function Csat({ report, channels, agents, filters }: Props) {
                             <span className="text-base font-normal text-tertiary">/5</span>
                         </p>
                         <p className="mt-1 text-[12px] text-tertiary tnum">{report.responses} responses</p>
+                        <div className="mt-4 space-y-1.5">
+                            {report.distribution.map((d) => {
+                                const pct = report.responses > 0 ? (d.count / report.responses) * 100 : 0;
+                                const tone = d.rating >= 4 ? 'bg-success' : d.rating >= 3 ? 'bg-warning' : 'bg-danger';
+                                return (
+                                    <div key={d.rating} className="flex items-center gap-2 text-[12px]">
+                                        <span className="w-3 shrink-0 text-tertiary tnum">{d.rating}</span>
+                                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
+                                            <div className={cn('h-full rounded-full', tone)} style={{ width: `${pct}%` }} />
+                                        </div>
+                                        <span className="w-7 shrink-0 text-end text-tertiary tnum">{d.count}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </Card>
                     <Card className="p-5 lg:col-span-2">
                         <h3 className="mb-3 text-sm font-semibold">Score trend</h3>

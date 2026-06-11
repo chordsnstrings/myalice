@@ -11,6 +11,7 @@ use App\Models\Message;
 use App\Models\Order;
 use App\Models\User;
 use App\Support\AnalyticsFilters;
+use App\Support\Tenancy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 
@@ -367,6 +368,9 @@ class AnalyticsService
             return [
                 'average' => round((float) $all->avg('rating'), 2),
                 'responses' => $all->count(),
+                'distribution' => collect(range(5, 1))->map(fn ($r) => [
+                    'rating' => $r, 'count' => $all->where('rating', $r)->count(),
+                ])->values()->all(),
                 'trend' => $this->dailySeries($f, 'csat'),
                 'by_agent' => $all->whereNotNull('agent_id')->groupBy('agent_id')->map(fn ($rows, $id) => [
                     'name' => $agents[$id] ?? 'Unknown', 'average' => round($rows->avg('rating'), 2), 'count' => $rows->count(),
@@ -430,15 +434,122 @@ class AnalyticsService
             ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name])->all();
     }
 
+    /**
+     * Granular operational report for managers: distributions + percentiles +
+     * staffing signals, not just averages.
+     *
+     * @return array<string, mixed>
+     */
+    public function operations(AnalyticsFilters $f): array
+    {
+        return $this->remember($f, 'operations', function () use ($f) {
+            $convs = $this->conversations($f)->get(['created_at', 'first_response_at', 'resolved_at', 'assignee_id', 'status', 'sla_breaching']);
+            $total = $convs->count();
+            $resolved = $convs->whereNotNull('resolved_at');
+
+            $frt = $convs->whereNotNull('first_response_at')
+                ->map(fn (Conversation $c) => abs($c->first_response_at->diffInSeconds($c->created_at)))->values()->all();
+            $rt = $resolved
+                ->map(fn (Conversation $c) => abs($c->resolved_at->diffInSeconds($c->created_at)))->values()->all();
+
+            $breaches = $convs->where('sla_breaching', true)->count();
+            $status = $convs->groupBy('status')->map->count();
+
+            $engaged = (int) $this->aiActions($f)->whereIn('type', ['reply', 'draft'])->distinct()->count('conversation_id');
+            $handoff = (int) $this->aiActions($f)->where('type', 'handoff')->distinct()->count('conversation_id');
+
+            return [
+                'total' => $total,
+                'resolved' => $resolved->count(),
+                'resolution_rate' => $total > 0 ? round($resolved->count() / $total * 100, 1) : 0.0,
+                'unassigned' => $convs->whereNull('assignee_id')->count(),
+                'median_first_response' => $this->humanDuration($this->median($frt)),
+                'p90_first_response' => $this->humanDuration($this->percentile($frt, 90)),
+                'median_resolution' => $this->humanDuration($this->median($rt)),
+                'p90_resolution' => $this->humanDuration($this->percentile($rt, 90)),
+                'sla_attainment' => $total > 0 ? round(($total - $breaches) / $total * 100, 1) : 0.0,
+                'sla_breaches' => $breaches,
+                'handoff_rate' => $engaged > 0 ? round($handoff / $engaged * 100, 1) : 0.0,
+                'response_distribution' => $this->responseDistribution($f),
+                'volume' => $this->dailySeries($f, 'conversations'),
+                'resolved_trend' => $this->dailySeries($f, 'resolution'),
+                'heatmap' => $this->volumeHeatmap($f),
+                'by_channel' => $this->channelBreakdown($f),
+                'status_split' => [
+                    ['label' => 'Resolved', 'value' => $resolved->count(), 'tone' => 'success'],
+                    ['label' => 'Open', 'value' => (int) $status->get('open', 0), 'tone' => 'info'],
+                    ['label' => 'Pending', 'value' => (int) $status->get('pending', 0), 'tone' => 'warning'],
+                ],
+            ];
+        });
+    }
+
+    /**
+     * Conversation volume by weekday (0=Sun) × hour (0–23) in the workspace tz —
+     * the "when do customers message us" heatmap that drives staffing.
+     *
+     * @return array{grid: array<int, array<int, int>>, max: int}
+     */
+    public function volumeHeatmap(AnalyticsFilters $f): array
+    {
+        $tz = Tenancy::currentOrFail()->timezone ?: 'UTC';
+        /** @var array<int, array<int, int>> $grid */
+        $grid = array_fill(0, 7, array_fill(0, 24, 0));
+
+        foreach ($this->conversations($f)->get(['created_at']) as $c) {
+            $local = $c->created_at->clone()->setTimezone($tz);
+            $grid[(int) $local->dayOfWeek][(int) $local->format('G')]++;
+        }
+
+        $max = 0;
+        foreach ($grid as $row) {
+            $max = max($max, max($row));
+        }
+
+        return ['grid' => $grid, 'max' => $max];
+    }
+
+    /** @param  array<int, float|int>  $values */
+    private function median(array $values): float
+    {
+        if ($values === []) {
+            return 0.0;
+        }
+        sort($values);
+        $n = count($values);
+        $mid = intdiv($n, 2);
+
+        return $n % 2 === 1 ? (float) $values[$mid] : (float) (($values[$mid - 1] + $values[$mid]) / 2);
+    }
+
+    /** @param  array<int, float|int>  $values */
+    private function percentile(array $values, int $p): float
+    {
+        if ($values === []) {
+            return 0.0;
+        }
+        sort($values);
+        $rank = (int) ceil($p / 100 * count($values)) - 1;
+
+        return (float) $values[max(0, min($rank, count($values) - 1))];
+    }
+
     private function humanDuration(float $seconds): string
     {
         $seconds = (int) round($seconds);
         if ($seconds <= 0) {
             return '—';
         }
-        $m = intdiv($seconds, 60);
-        $s = $seconds % 60;
+        if ($seconds < 3600) {
+            $m = intdiv($seconds, 60);
+            $s = $seconds % 60;
 
-        return $m > 0 ? "{$m}m {$s}s" : "{$s}s";
+            return $m > 0 ? "{$m}m {$s}s" : "{$s}s";
+        }
+        if ($seconds < 86400) {
+            return intdiv($seconds, 3600).'h '.intdiv($seconds % 3600, 60).'m';
+        }
+
+        return intdiv($seconds, 86400).'d '.intdiv($seconds % 86400, 3600).'h';
     }
 }
