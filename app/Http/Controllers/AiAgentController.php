@@ -233,6 +233,11 @@ class AiAgentController extends Controller
             'guardrails.reengage' => ['array'],
             'guardrails.reengage.enabled' => ['boolean'],
             'guardrails.reengage.min_customer_messages' => ['nullable', 'integer', 'min:1', 'max:50'],
+            // Response style
+            'guardrails.style' => ['array'],
+            'guardrails.style.length' => ['nullable', Rule::in(AiAgent::REPLY_LENGTHS)],
+            'guardrails.style.format' => ['nullable', Rule::in(AiAgent::REPLY_FORMATS)],
+            'guardrails.style.emoji' => ['boolean'],
         ]);
 
         AiAgent::updateOrCreate(

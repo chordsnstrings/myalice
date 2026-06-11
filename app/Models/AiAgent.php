@@ -52,10 +52,21 @@ class AiAgent extends Model
             'enabled' => false,
             'min_customer_messages' => 1,
         ],
+        // Response style — how replies are shaped (length, format, emoji).
+        'style' => [
+            'length' => 'medium',  // short | medium | long
+            'format' => 'prose',   // prose | bullets
+            'emoji' => false,
+        ],
     ];
 
     /** Closure techniques an admin may enable; surfaced to the UI and the prompt. */
     public const CLOSURE_TECHNIQUES = ['fomo', 'scarcity', 'urgency', 'social_proof', 'anchoring', 'assumptive_close', 'authority'];
+
+    /** Reply-style options. */
+    public const REPLY_LENGTHS = ['short', 'medium', 'long'];
+
+    public const REPLY_FORMATS = ['prose', 'bullets'];
 
     /** Discount layer types an admin may configure. */
     public const DISCOUNT_TYPES = ['free_shipping', 'cart_percent', 'service_percent'];
@@ -83,7 +94,7 @@ class AiAgent extends Model
 
         // Deep-merge the nested config blocks so a partially-stored block keeps
         // the defaults for any keys the admin didn't set.
-        foreach (['discount', 'reengage'] as $block) {
+        foreach (['discount', 'reengage', 'style'] as $block) {
             $merged[$block] = array_merge(self::DEFAULT_GUARDRAILS[$block], $this->guardrails[$block] ?? []);
         }
 

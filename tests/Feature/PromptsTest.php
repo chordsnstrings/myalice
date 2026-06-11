@@ -79,6 +79,24 @@ it('injects enabled closing tactics with the gated authority frame', function ()
     expect($prompt)->not->toContain('Anchoring'); // not enabled
 });
 
+it('renders the response-style section from the style guardrail', function () {
+    $agent = promptAgent(['guardrails' => ['style' => ['length' => 'short', 'format' => 'bullets', 'emoji' => true]]]);
+
+    $prompt = Prompts::system($agent, $this->ws, null, new Conversation(['channel' => 'web']));
+
+    expect($prompt)->toContain('RESPONSE STYLE');
+    expect($prompt)->toContain('one sentence');         // short
+    expect($prompt)->toContain('bullet points');        // bullets
+    expect($prompt)->toContain('emoji now and then');   // emoji on
+});
+
+it('defaults the response style to brief prose, no emoji', function () {
+    $prompt = Prompts::system(promptAgent(), $this->ws, null, new Conversation(['channel' => 'web']));
+
+    expect($prompt)->toContain('1–3 sentences');
+    expect($prompt)->toContain('Do not use emoji');
+});
+
 it('injects the discount strategy when layers are configured', function () {
     $agent = promptAgent(['guardrails' => ['discount' => [
         'enabled' => true,

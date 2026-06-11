@@ -75,6 +75,10 @@ class Prompts
         $sections[] = "METHOD:\nTrack the stage of the conversation: greet → qualify → present → handle objection → close → confirm. Never skip qualification. After an objection, acknowledge it, reframe with a relevant benefit or proof, then re-close.\n".$method;
         $sections[] = "TONE:\n".$tone;
 
+        if ($style = self::responseStyle($agent)) {
+            $sections[] = $style;
+        }
+
         $catalog = self::catalog($ws);
         if ($catalog !== '') {
             $sections[] = "CATALOG (the ONLY source of products, prices and stock — never invent prices; any discount must come from the offer_discount tool):\n".$catalog;
@@ -153,6 +157,27 @@ class Prompts
         ]);
     }
 
+    /** Admin-chosen reply shape (length / format / emoji). */
+    private static function responseStyle(AiAgent $agent): string
+    {
+        $style = $agent->guardConfig()['style'] ?? [];
+
+        $lines = [];
+        $lines[] = match ($style['length'] ?? 'medium') {
+            'short' => 'Keep replies very short — ideally one sentence.',
+            'long' => 'Give fuller, detailed replies (a short paragraph or two) when it helps.',
+            default => 'Keep replies brief and chat-native — 1–3 sentences.',
+        };
+        $lines[] = ($style['format'] ?? 'prose') === 'bullets'
+            ? 'When listing options or steps, use short bullet points.'
+            : 'Write in natural prose, not bullet lists, unless the customer asks for a list.';
+        $lines[] = ($style['emoji'] ?? false)
+            ? 'A tasteful emoji now and then is fine.'
+            : 'Do not use emoji.';
+
+        return "RESPONSE STYLE:\n- ".implode("\n- ", $lines);
+    }
+
     private static function catalog(Workspace $ws): string
     {
         $limit = (int) config('ai.catalog_limit', 20);
@@ -176,6 +201,8 @@ class Prompts
             'modes' => collect(self::MODES)->map(fn ($v, $k) => ['value' => $k, 'label' => $v])->values(),
             'closure_techniques' => collect(AiAgent::CLOSURE_TECHNIQUES)->map(fn ($k) => ['value' => $k, 'label' => ucwords(str_replace('_', ' ', $k))])->values(),
             'discount_types' => collect(AiAgent::DISCOUNT_TYPES)->map(fn ($k) => ['value' => $k, 'label' => ucwords(str_replace('_', ' ', $k))])->values(),
+            'reply_lengths' => collect(AiAgent::REPLY_LENGTHS)->map(fn ($k) => ['value' => $k, 'label' => ucfirst($k)])->values(),
+            'reply_formats' => collect(AiAgent::REPLY_FORMATS)->map(fn ($k) => ['value' => $k, 'label' => ucfirst($k)])->values(),
         ];
     }
 }

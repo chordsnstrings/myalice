@@ -56,6 +56,12 @@ interface ReengageConfig {
     min_customer_messages: number;
 }
 
+interface StyleConfig {
+    length: string;
+    format: string;
+    emoji: boolean;
+}
+
 interface Guardrails {
     max_messages_per_conversation: number;
     order_total_cap: number | null;
@@ -65,6 +71,7 @@ interface Guardrails {
     closure_techniques: string[];
     discount: DiscountConfig;
     reengage: ReengageConfig;
+    style: StyleConfig;
 }
 
 interface AgentProfile {
@@ -87,6 +94,8 @@ interface Meta {
     modes: Opt[];
     closure_techniques: Opt[];
     discount_types: Opt[];
+    reply_lengths: Opt[];
+    reply_formats: Opt[];
 }
 
 interface ScopeOption {
@@ -339,6 +348,7 @@ function AgentForm({
             closure_techniques: agent.guardrails.closure_techniques ?? [],
             discount: agent.guardrails.discount,
             reengage: agent.guardrails.reengage,
+            style: agent.guardrails.style ?? { length: 'medium', format: 'prose', emoji: false },
         },
     });
 
@@ -347,6 +357,9 @@ function AgentForm({
 
     const setDiscount = <K extends keyof DiscountConfig>(key: K, value: DiscountConfig[K]) =>
         setData('guardrails', { ...data.guardrails, discount: { ...data.guardrails.discount, [key]: value } });
+
+    const setStyle = <K extends keyof StyleConfig>(key: K, value: StyleConfig[K]) =>
+        setData('guardrails', { ...data.guardrails, style: { ...data.guardrails.style, [key]: value } });
 
     const toggleTechnique = (value: string, on: boolean) =>
         setGuard('closure_techniques', on
@@ -463,6 +476,25 @@ function AgentForm({
                         </select>
                     </Field>
                 )}
+
+                <Field label="Response style" hint="How replies are shaped.">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                        <select className={selectClass} value={data.guardrails.style.length} onChange={(e) => setStyle('length', e.target.value)}>
+                            {meta.reply_lengths.map((o) => (
+                                <option key={o.value} value={o.value}>{o.label} replies</option>
+                            ))}
+                        </select>
+                        <select className={selectClass} value={data.guardrails.style.format} onChange={(e) => setStyle('format', e.target.value)}>
+                            {meta.reply_formats.map((o) => (
+                                <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                        </select>
+                        <label className="flex h-9 cursor-pointer items-center justify-between rounded-[var(--radius-control)] border border-default px-3">
+                            <span className="text-[13px] text-secondary">Emoji</span>
+                            <Switch checked={data.guardrails.style.emoji} onChange={(v) => setStyle('emoji', v)} />
+                        </label>
+                    </div>
+                </Field>
 
                 <Textarea
                     label="Business profile"
