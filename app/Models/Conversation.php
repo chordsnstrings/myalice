@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
@@ -78,5 +79,15 @@ class Conversation extends Model
     public function csatRatings(): HasMany
     {
         return $this->hasMany(CsatRating::class);
+    }
+
+    /**
+     * Topic tags applied to this conversation ("what it's about").
+     *
+     * @return BelongsToMany<Tag, $this>
+     */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'conversation_tag');
     }
 }

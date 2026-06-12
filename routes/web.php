@@ -17,6 +17,7 @@ use App\Http\Controllers\Reports\AgentPerformanceController;
 use App\Http\Controllers\Reports\CsatReportController;
 use App\Http\Controllers\Reports\OperationsReportController;
 use App\Http\Controllers\Reports\SalesReportController;
+use App\Http\Controllers\Reports\TopicsReportController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\WorkspaceController;
@@ -59,6 +60,8 @@ Route::middleware(['auth', 'workspace'])->group(function () {
     Route::put('/conversations/{conversation}/resolve', [InboxController::class, 'resolve'])->name('conversations.resolve');
     Route::put('/conversations/{conversation}/assign', [InboxController::class, 'assign'])->name('conversations.assign');
     Route::put('/conversations/{conversation}/resume-ai', [InboxController::class, 'resumeAi'])->name('conversations.resume-ai');
+    Route::post('/conversations/{conversation}/tags', [InboxController::class, 'addTag'])->name('conversations.tags.add');
+    Route::delete('/conversations/{conversation}/tags/{tag}', [InboxController::class, 'removeTag'])->name('conversations.tags.remove');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Manager reports (B10.2–B10.4)
@@ -68,6 +71,7 @@ Route::middleware(['auth', 'workspace'])->group(function () {
         Route::get('/agents/{agent}', [AgentPerformanceController::class, 'show'])->name('agents.show');
         Route::get('/sales', [SalesReportController::class, 'index'])->name('sales');
         Route::get('/csat', [CsatReportController::class, 'index'])->name('csat');
+        Route::get('/topics', [TopicsReportController::class, 'index'])->name('topics');
     });
 
     // CRM

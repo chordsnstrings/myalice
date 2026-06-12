@@ -64,6 +64,13 @@ export interface Conversation {
     sla_breaching?: boolean;
     window_open?: boolean;
     ai_status?: 'active' | 'handed_off' | 'suppressed' | null;
+    tags?: { id: number; name: string; color: string }[];
+}
+
+export interface WorkspaceTag {
+    id: number;
+    name: string;
+    color: string;
 }
 
 export interface Message {

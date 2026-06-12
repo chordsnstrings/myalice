@@ -74,6 +74,12 @@ class DatabaseSeeder extends Seeder
             Tag::create(['name' => $name, 'color' => $color]);
         }
 
+        // Topic tags — "what conversations are about" — power the Topics report.
+        foreach (['Shipping' => 'info', 'Returns' => 'warning', 'Sizing' => 'accent', 'Order status' => 'success', 'Payment' => 'danger'] as $name => $color) {
+            Tag::create(['name' => $name, 'color' => $color]);
+        }
+        $topicTagIds = Tag::whereIn('name', ['Shipping', 'Returns', 'Sizing', 'Order status', 'Payment'])->pluck('id')->all();
+
         foreach ([
             ['/thanks', 'Thanks for reaching out! How can I help today?'],
             ['/shipping', 'We ship worldwide. Domestic orders arrive in 2–4 days.'],
@@ -118,6 +124,10 @@ class DatabaseSeeder extends Seeder
             Message::create(['conversation_id' => $conv->id, 'direction' => 'in', 'author' => 'customer', 'body' => 'Hi! Is this available?', 'sent_at' => now()->subMinutes($i * 11 + 20)]);
             Message::create(['conversation_id' => $conv->id, 'direction' => 'out', 'author' => 'agent', 'body' => 'Yes — in stock now.', 'status' => 'read', 'sent_at' => now()->subMinutes($i * 11 + 15)]);
             Message::create(['conversation_id' => $conv->id, 'direction' => 'in', 'author' => 'customer', 'body' => 'Thanks for the quick reply!', 'sent_at' => now()->subMinutes($i * 11 + 3)]);
+
+            if (rand(1, 100) <= 75) {
+                $conv->tags()->attach(collect($topicTagIds)->random(rand(1, 2))->all());
+            }
 
             if ($i % 2 === 0) {
                 Order::create([
@@ -174,6 +184,10 @@ class DatabaseSeeder extends Seeder
             ]);
             // Back-date created_at (query update bypasses observers/timestamps).
             Conversation::where('id', $conv->id)->update(['created_at' => $createdAt, 'updated_at' => $lastAt]);
+
+            if (rand(1, 100) <= 78) {
+                $conv->tags()->attach(collect($topicTagIds)->random(rand(1, 2))->all());
+            }
 
             Message::create(['conversation_id' => $conv->id, 'direction' => 'in', 'author' => 'customer', 'body' => 'Hello, I need help.', 'sent_at' => $createdAt]);
             Message::create(['conversation_id' => $conv->id, 'direction' => 'out', 'author' => 'agent', 'body' => 'Happy to help!', 'status' => 'read', 'sent_at' => $firstResponseAt]);

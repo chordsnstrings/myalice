@@ -555,6 +555,59 @@ class AnalyticsService
     }
 
     /**
+     * Topic analytics — what conversations are about, by tag: volume, share,
+     * resolution rate and CSAT, plus how much of the inbox is tagged.
+     *
+     * @return array<string, mixed>
+     */
+    public function topics(AnalyticsFilters $f): array
+    {
+        return $this->remember($f, 'topics', function () use ($f) {
+            $convs = $this->conversations($f)->with('tags:id,name,color')->get(['id', 'resolved_at']);
+            $total = $convs->count();
+            $csatByConv = $this->ratings($f)->get(['conversation_id', 'rating'])->groupBy('conversation_id');
+
+            $byTag = [];
+            $tagged = 0;
+            foreach ($convs as $c) {
+                if ($c->tags->isEmpty()) {
+                    continue;
+                }
+                $tagged++;
+                $ratings = $csatByConv->get($c->id);
+                foreach ($c->tags as $t) {
+                    $row = $byTag[$t->id] ?? ['id' => $t->id, 'name' => $t->name, 'color' => $t->color, 'count' => 0, 'resolved' => 0, 'csat_sum' => 0.0, 'csat_n' => 0];
+                    $row['count']++;
+                    $row['resolved'] += $c->resolved_at ? 1 : 0;
+                    if ($ratings) {
+                        $row['csat_sum'] += $ratings->sum('rating');
+                        $row['csat_n'] += $ratings->count();
+                    }
+                    $byTag[$t->id] = $row;
+                }
+            }
+
+            $tags = collect($byTag)->map(fn ($r) => [
+                'id' => $r['id'],
+                'name' => $r['name'],
+                'color' => $r['color'],
+                'count' => $r['count'],
+                'share' => $total > 0 ? round($r['count'] / $total * 100, 1) : 0.0,
+                'resolution_rate' => $r['count'] > 0 ? round($r['resolved'] / $r['count'] * 100, 1) : 0.0,
+                'csat' => $r['csat_n'] > 0 ? round($r['csat_sum'] / $r['csat_n'], 2) : null,
+            ])->sortByDesc('count')->values()->all();
+
+            return [
+                'total' => $total,
+                'tagged' => $tagged,
+                'untagged' => $total - $tagged,
+                'coverage' => $total > 0 ? round($tagged / $total * 100, 1) : 0.0,
+                'tags' => $tags,
+            ];
+        });
+    }
+
+    /**
      * Conversation volume by weekday (0=Sun) × hour (0–23) in the workspace tz —
      * the "when do customers message us" heatmap that drives staffing.
      *

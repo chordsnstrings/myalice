@@ -9,6 +9,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\MessageTemplate;
 use App\Models\QuickReply;
+use App\Models\Tag;
 use App\Models\User;
 use App\Support\Tenancy;
 use Illuminate\Http\JsonResponse;
@@ -29,7 +30,7 @@ class InboxController extends Controller
         $agents = User::where('workspace_id', Tenancy::id())->orderBy('name')->get(['id', 'name']);
         $names = $agents->pluck('name', 'id');
 
-        $conversations = Conversation::with('contact')
+        $conversations = Conversation::with(['contact', 'tags:id,name,color'])
             ->orderByDesc('last_message_at')
             ->get()
             ->map(fn (Conversation $c) => [
@@ -49,6 +50,7 @@ class InboxController extends Controller
                 'sla_breaching' => $c->sla_breaching,
                 'window_open' => $c->window_open,
                 'ai_status' => $c->ai_status,
+                'tags' => $c->tags->map(fn (Tag $t) => ['id' => $t->id, 'name' => $t->name, 'color' => $t->color])->values()->all(),
             ])->values();
 
         $messages = Message::orderBy('sent_at')
@@ -70,6 +72,7 @@ class InboxController extends Controller
             'templates' => MessageTemplate::where('approval_status', 'approved')
                 ->orderBy('name')->get(['id', 'name', 'body'])->all(),
             'quickReplies' => QuickReply::orderBy('shortcut')->get(['id', 'shortcut', 'body'])->all(),
+            'allTags' => Tag::orderBy('name')->get(['id', 'name', 'color'])->all(),
         ]);
     }
 
@@ -158,6 +161,31 @@ class InboxController extends Controller
         $conversation->update(['ai_status' => 'active', 'ai_resumed_at' => now()]);
 
         return back()->with('success', 'AI resumed — it will handle the next message.');
+    }
+
+    /** Tag a conversation with a topic (existing tag id, or create one by name). */
+    public function addTag(Request $request, Conversation $conversation): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['nullable', 'string', 'max:40', 'required_without:tag_id'],
+            'tag_id' => ['nullable', 'integer', 'required_without:name'],
+        ]);
+
+        $tag = isset($data['tag_id'])
+            ? Tag::findOrFail($data['tag_id'])
+            : Tag::firstOrCreate(['name' => trim((string) $data['name'])], ['color' => 'accent']);
+
+        $conversation->tags()->syncWithoutDetaching([$tag->id]);
+
+        return response()->json(['tag' => ['id' => $tag->id, 'name' => $tag->name, 'color' => $tag->color]]);
+    }
+
+    /** Remove a topic tag from a conversation. */
+    public function removeTag(Conversation $conversation, Tag $tag): JsonResponse
+    {
+        $conversation->tags()->detach($tag->id);
+
+        return response()->json(['ok' => true]);
     }
 
     /** Assign (or unassign) a conversation to a teammate in this workspace. */

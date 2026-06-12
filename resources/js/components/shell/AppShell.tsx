@@ -13,6 +13,7 @@ import {
     Gauge,
     DollarSign,
     Star,
+    Tags,
     Settings,
     Search,
     Wallet,
@@ -65,6 +66,7 @@ const reportsNav: NavItem[] = [
     { key: 'nav.agents', href: '/reports/agents', icon: Gauge, managerOnly: true },
     { key: 'nav.sales', href: '/reports/sales', icon: DollarSign, managerOnly: true },
     { key: 'nav.csat', href: '/reports/csat', icon: Star, managerOnly: true },
+    { key: 'nav.topics', label: 'Topics', href: '/reports/topics', icon: Tags, managerOnly: true },
 ];
 
 const languages = [

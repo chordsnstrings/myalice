@@ -32,7 +32,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { FilteredEmpty } from '@/components/ui/States';
 import { useToast } from '@/components/ui/Toast';
 import { cn, relativeTime, money } from '@/lib/utils';
-import type { Conversation, Message, PageProps } from '@/types';
+import type { Conversation, Message, PageProps, WorkspaceTag } from '@/types';
 
 interface Props {
     conversations: Conversation[];
@@ -40,6 +40,7 @@ interface Props {
     agents: { id: number; name: string }[];
     templates: { id: number; name: string; body: string }[];
     quickReplies: { id: number; shortcut: string; body: string }[];
+    allTags: WorkspaceTag[];
 }
 
 const EMOJIS = ['👍', '🙏', '😊', '🎉', '❤️', '🔥', '✅', '👋', '😍', '🚀', '💯', '🛒'];
@@ -57,11 +58,15 @@ function StatusTick({ status }: { status?: Message['status'] }) {
     return null;
 }
 
-export default function InboxIndex({ conversations, messages: seed, agents, templates, quickReplies }: Props) {
+export default function InboxIndex({ conversations, messages: seed, agents, templates, quickReplies, allTags }: Props) {
     const { toast } = useToast();
     const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
     const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>(urlParams.get('status') === 'resolved' ? 'Closed' : 'All');
     const [channelFilter, setChannelFilter] = useState<string | null>(urlParams.get('channel'));
+    const [tagFilter, setTagFilter] = useState<string | null>(urlParams.get('tag'));
+    const [convTags, setConvTags] = useState<Record<number, WorkspaceTag[]>>(
+        () => Object.fromEntries(conversations.map((c) => [c.id, c.tags ?? []])),
+    );
     const [tool, setTool] = useState<'emoji' | 'quick' | null>(null);
     const [query, setQuery] = useState('');
     const [selectedId, setSelectedId] = useState<number | null>(conversations[0]?.id ?? null);
@@ -110,9 +115,29 @@ export default function InboxIndex({ conversations, messages: seed, agents, temp
         if (activeFilter === 'Unassigned') list = list.filter((c) => !c.assignee);
         if (activeFilter === 'Closed') list = list.filter((c) => c.status === 'resolved');
         if (channelFilter) list = list.filter((c) => c.channel === channelFilter);
+        if (tagFilter) list = list.filter((c) => (convTags[c.id] ?? []).some((t) => t.name === tagFilter));
         if (query) list = list.filter((c) => c.contact.name.toLowerCase().includes(query.toLowerCase()));
         return list;
-    }, [conversations, activeFilter, channelFilter, query]);
+    }, [conversations, activeFilter, channelFilter, tagFilter, convTags, query]);
+
+    const addTag = (name?: string, tagId?: number) => {
+        if (!selectedId) return;
+        window.axios
+            .post(`/conversations/${selectedId}/tags`, name ? { name } : { tag_id: tagId })
+            .then((res) => {
+                const tag = res.data.tag as WorkspaceTag;
+                setConvTags((m) => {
+                    const cur = m[selectedId] ?? [];
+                    return cur.some((t) => t.id === tag.id) ? m : { ...m, [selectedId]: [...cur, tag] };
+                });
+            });
+    };
+
+    const removeTag = (tagId: number) => {
+        if (!selectedId) return;
+        window.axios.delete(`/conversations/${selectedId}/tags/${tagId}`);
+        setConvTags((m) => ({ ...m, [selectedId]: (m[selectedId] ?? []).filter((t) => t.id !== tagId) }));
+    };
 
     const scrollEnd = () => setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), 20);
 
@@ -232,14 +257,21 @@ export default function InboxIndex({ conversations, messages: seed, agents, temp
                                 </button>
                             ))}
                         </div>
-                        {channelFilter && (
-                            <button
-                                onClick={() => setChannelFilter(null)}
-                                className="press mt-2 inline-flex items-center gap-1 rounded-full bg-accent-subtle px-2.5 py-1 text-[12px] font-medium capitalize text-accent"
-                            >
-                                {channelFilter}
-                                <X className="size-3" />
-                            </button>
+                        {(channelFilter || tagFilter) && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                                {channelFilter && (
+                                    <button onClick={() => setChannelFilter(null)} className="press inline-flex items-center gap-1 rounded-full bg-accent-subtle px-2.5 py-1 text-[12px] font-medium capitalize text-accent">
+                                        {channelFilter}
+                                        <X className="size-3" />
+                                    </button>
+                                )}
+                                {tagFilter && (
+                                    <button onClick={() => setTagFilter(null)} className="press inline-flex items-center gap-1 rounded-full bg-accent-subtle px-2.5 py-1 text-[12px] font-medium text-accent">
+                                        #{tagFilter}
+                                        <X className="size-3" />
+                                    </button>
+                                )}
+                            </div>
                         )}
                     </div>
 
@@ -553,7 +585,7 @@ export default function InboxIndex({ conversations, messages: seed, agents, temp
                 {/* RIGHT — customer context: desktop side pane */}
                 {selected && contextOpen && (
                     <aside className="hidden w-[300px] shrink-0 flex-col overflow-y-auto border-s border-default bg-surface xl:flex">
-                        <ContextContent selected={selected} />
+                        <ContextContent selected={selected} tags={convTags[selected.id] ?? []} allTags={allTags} onAdd={addTag} onRemove={removeTag} />
                     </aside>
                 )}
             </div>
@@ -570,7 +602,7 @@ export default function InboxIndex({ conversations, messages: seed, agents, temp
                                     <X className="size-5" />
                                 </button>
                             </div>
-                            <ContextContent selected={selected} />
+                            <ContextContent selected={selected} tags={convTags[selected.id] ?? []} allTags={allTags} onAdd={addTag} onRemove={removeTag} />
                         </div>
                     </div>,
                     document.body,
@@ -579,7 +611,25 @@ export default function InboxIndex({ conversations, messages: seed, agents, temp
     );
 }
 
-function ContextContent({ selected }: { selected: Conversation }) {
+function ContextContent({
+    selected,
+    tags,
+    allTags,
+    onAdd,
+    onRemove,
+}: {
+    selected: Conversation;
+    tags: WorkspaceTag[];
+    allTags: WorkspaceTag[];
+    onAdd: (name?: string, tagId?: number) => void;
+    onRemove: (tagId: number) => void;
+}) {
+    const [menu, setMenu] = useState(false);
+    const [draft, setDraft] = useState('');
+    const tone = (c: string): 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info' =>
+        (['neutral', 'accent', 'success', 'warning', 'danger', 'info'].includes(c) ? c : 'accent') as 'accent';
+    const unused = allTags.filter((t) => !tags.some((x) => x.id === t.id));
+
     return (
         <>
             <div className="flex flex-col items-center border-b border-default px-5 py-6 text-center">
@@ -589,13 +639,52 @@ function ContextContent({ selected }: { selected: Conversation }) {
                 <Badge tone="accent" className="mt-2">{selected.contact.lifecycle ?? 'Customer'}</Badge>
             </div>
 
-            <Section title="Tags">
-                <div className="flex flex-wrap gap-1.5">
-                    <Badge tone="info">VIP</Badge>
-                    <Badge tone="neutral">Returning</Badge>
-                    <button className="press inline-flex items-center gap-1 rounded-full border border-dashed border-strong px-2 py-0.5 text-[12px] text-tertiary hover:text-secondary">
+            <Section title="Topics">
+                <div className="relative flex flex-wrap items-center gap-1.5">
+                    {tags.length === 0 && <span className="text-[12px] text-tertiary">No topics yet</span>}
+                    {tags.map((t) => (
+                        <span key={t.id} className="group/tag inline-flex items-center">
+                            <Badge tone={tone(t.color)}>
+                                {t.name}
+                                <button onClick={() => onRemove(t.id)} aria-label={`Remove ${t.name}`} className="ms-0.5 opacity-60 hover:opacity-100">
+                                    <X className="size-3" />
+                                </button>
+                            </Badge>
+                        </span>
+                    ))}
+                    <button
+                        onClick={() => setMenu((o) => !o)}
+                        className="press inline-flex items-center gap-1 rounded-full border border-dashed border-strong px-2 py-0.5 text-[12px] text-tertiary hover:text-secondary"
+                    >
                         <Plus className="size-3" /> Add
                     </button>
+
+                    {menu && (
+                        <>
+                            <div className="fixed inset-0 z-40" onClick={() => setMenu(false)} />
+                            <div className="animate-pop absolute start-0 top-full z-50 mt-1.5 w-56 rounded-[var(--radius-card)] border border-default bg-surface p-1.5 shadow-[var(--shadow-md)]">
+                                <input
+                                    value={draft}
+                                    onChange={(e) => setDraft(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && draft.trim() && (onAdd(draft.trim()), setDraft(''), setMenu(false))}
+                                    placeholder="New topic + Enter"
+                                    className="mb-1 h-8 w-full rounded-[var(--radius-control)] border border-strong bg-surface px-2.5 text-[13px] outline-none focus:border-accent"
+                                    autoFocus
+                                />
+                                <div className="max-h-48 overflow-y-auto">
+                                    {unused.map((t) => (
+                                        <button
+                                            key={t.id}
+                                            onClick={() => { onAdd(undefined, t.id); setMenu(false); }}
+                                            className="flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-start text-[13px] hover:bg-surface-hover"
+                                        >
+                                            <Badge tone={tone(t.color)}>{t.name}</Badge>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </Section>
 
