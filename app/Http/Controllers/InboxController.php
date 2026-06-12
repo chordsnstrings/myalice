@@ -142,9 +142,12 @@ class InboxController extends Controller
     /** Resolve an open conversation, or reopen a resolved one. */
     public function resolve(Conversation $conversation): RedirectResponse
     {
-        $conversation->update([
-            'status' => $conversation->status === 'resolved' ? 'open' : 'resolved',
-        ]);
+        $reopening = $conversation->status === 'resolved';
+        $conversation->update(['status' => $reopening ? 'open' : 'resolved']);
+
+        if ($reopening) {
+            $conversation->increment('reopened_count');
+        }
 
         return back();
     }

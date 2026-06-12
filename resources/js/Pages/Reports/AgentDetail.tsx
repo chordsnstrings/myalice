@@ -10,6 +10,7 @@ import { relativeTime } from '@/lib/utils';
 interface Detail {
     agent: { id: number; name: string };
     kpis: { label: string; value: string }[];
+    stats: { label: string; value: string }[];
     volume: { day: string; value: number }[];
     response_distribution: Record<string, number>;
     comments: { rating: number; comment: string; channel: string; at: string }[];
@@ -34,6 +35,16 @@ export default function AgentDetail({ detail }: { detail: Detail }) {
                             <Card key={k.label} className="p-4">
                                 <p className="text-[13px] text-secondary">{k.label}</p>
                                 <p className="mt-1 text-2xl font-semibold tracking-tight tnum">{k.value}</p>
+                            </Card>
+                        ))}
+                    </div>
+
+                    {/* Granular timing + quality stats */}
+                    <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                        {detail.stats.map((s) => (
+                            <Card key={s.label} className="p-4">
+                                <p className="text-[12px] text-secondary">{s.label}</p>
+                                <p className="mt-1 text-lg font-semibold tracking-tight tnum">{s.value}</p>
                             </Card>
                         ))}
                     </div>

@@ -12,6 +12,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Support\AnalyticsFilters;
 use App\Support\Tenancy;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 
@@ -115,14 +116,29 @@ class AnalyticsService
         });
     }
 
-    /** @return array<int, float> */
+    /** @return array<int, float> Always-daily 7-point spark, independent of the report grouping. */
     private function spark(AnalyticsFilters $f, string $metric): array
     {
-        return array_map(fn ($p) => (float) $p['value'], array_slice($this->dailySeries($f, $metric), -7));
+        return array_map(fn ($p) => (float) $p['value'], array_slice($this->dailySeries($f->withGroup('day'), $metric), -7));
+    }
+
+    /** Bucket key for a date under the active grouping (day | week | month). */
+    private function bucketKey(?CarbonInterface $d, string $group): string
+    {
+        if ($d === null) {
+            return '';
+        }
+
+        return match ($group) {
+            'month' => $d->format('Y-m'),
+            'week' => $d->copy()->startOfWeek()->format('Y-m-d'),
+            default => $d->format('Y-m-d'),
+        };
     }
 
     /**
-     * Per-day series for trend charts (computed live; bucketed in PHP).
+     * Per-bucket series for trend charts (computed live; bucketed in PHP by the
+     * filter's grouping — day, week or month).
      *
      * @return array<int, array{day:string,value:float}>
      */
@@ -131,35 +147,36 @@ class AnalyticsService
         return $this->remember($f, "series:$metric", function () use ($f, $metric) {
             $days = collect();
             for ($d = $f->from->clone(); $d->lte($f->to); $d->addDay()) {
-                $days->put($d->format('Y-m-d'), 0.0);
+                $key = $this->bucketKey($d, $f->group);
+                if (! $days->has($key)) {
+                    $days->put($key, 0.0);
+                }
             }
 
             if ($metric === 'revenue') {
-                $orders = $this->chatOrders($f)->get(['total', 'created_at']);
-                foreach ($orders as $o) {
-                    $key = $o->created_at->format('Y-m-d');
+                foreach ($this->chatOrders($f)->get(['total', 'created_at']) as $o) {
+                    $key = $this->bucketKey($o->created_at, $f->group);
                     if ($days->has($key)) {
                         $days[$key] += (float) $o->total;
                     }
                 }
             } elseif ($metric === 'csat') {
-                $byDay = $this->ratings($f)->get(['rating', 'rated_at'])->groupBy(fn ($r) => $r->rated_at->format('Y-m-d'));
-                foreach ($byDay as $key => $rows) {
+                $byBucket = $this->ratings($f)->get(['rating', 'rated_at'])
+                    ->groupBy(fn ($r) => $this->bucketKey($r->rated_at, $f->group));
+                foreach ($byBucket as $key => $rows) {
                     if ($days->has($key)) {
                         $days[$key] = round($rows->avg('rating'), 2);
                     }
                 }
             } else { // conversations | resolution | response
-                $convs = $this->conversations($f)->get(['created_at', 'first_response_at', 'resolved_at']);
-                foreach ($convs as $c) {
-                    $key = $c->created_at->format('Y-m-d');
+                foreach ($this->conversations($f)->get(['created_at', 'first_response_at', 'resolved_at']) as $c) {
+                    $key = $this->bucketKey($c->created_at, $f->group);
                     if (! $days->has($key)) {
                         continue;
                     }
                     if ($metric === 'resolution') {
                         $days[$key] += $c->resolved_at ? 1 : 0;
                     } elseif ($metric === 'response') {
-                        // store sum; averaged below
                         $days[$key] += $c->first_response_at ? abs($c->first_response_at->diffInSeconds($c->created_at)) : 0;
                     } else {
                         $days[$key] += 1;
@@ -232,16 +249,31 @@ class AnalyticsService
                 ->whereNotNull('comment')->latest('rated_at')->limit(10)
                 ->get(['rating', 'comment', 'channel', 'rated_at']);
 
-            // "Active hours (proxy)": distinct hours with an outbound agent message.
-            $activeHours = Message::where('direction', 'out')->where('author', 'agent')
+            // "Active hours (proxy)" + messages sent: outbound agent messages in range.
+            $agentMsgs = Message::where('direction', 'out')->where('author', 'agent')
                 ->whereBetween('sent_at', [$scoped->from, $scoped->to])
                 ->whereIn('conversation_id', $this->conversations($scoped)->select('id'))
-                ->get(['sent_at'])
-                ->map(fn ($m) => $m->sent_at->format('Y-m-d H'))->unique()->count();
+                ->get(['sent_at']);
+            $activeHours = $agentMsgs->map(fn ($m) => $m->sent_at->format('Y-m-d H'))->unique()->count();
+
+            // Granular timing + quality stats.
+            $convs = $this->conversations($scoped)->get(['created_at', 'first_response_at', 'resolved_at', 'reopened_count']);
+            $frt = $convs->whereNotNull('first_response_at')
+                ->map(fn (Conversation $c) => abs($c->first_response_at->diffInSeconds($c->created_at)))->values()->all();
+            $resolvedConvs = $convs->whereNotNull('resolved_at');
+            $rt = $resolvedConvs->map(fn (Conversation $c) => abs($c->resolved_at->diffInSeconds($c->created_at)))->values()->all();
+            $reopened = $resolvedConvs->where('reopened_count', '>', 0)->count();
 
             return [
                 'agent' => ['id' => $agent->id, 'name' => $agent->name],
                 'kpis' => $this->kpis($scoped),
+                'stats' => [
+                    ['label' => 'Median 1st response', 'value' => $this->humanDuration($this->median($frt))],
+                    ['label' => 'p90 1st response', 'value' => $this->humanDuration($this->percentile($frt, 90))],
+                    ['label' => 'Median resolution', 'value' => $this->humanDuration($this->median($rt))],
+                    ['label' => 'Messages sent', 'value' => number_format($agentMsgs->count())],
+                    ['label' => 'Reopen rate', 'value' => ($resolvedConvs->count() > 0 ? round($reopened / $resolvedConvs->count() * 100, 1) : 0.0).'%'],
+                ],
                 'volume' => $this->dailySeries($scoped, 'conversations'),
                 'response_distribution' => $this->responseDistribution($scoped),
                 'comments' => $comments->map(fn ($c) => [
@@ -260,17 +292,55 @@ class AnalyticsService
             $revenue = (float) $this->chatOrders($f)->sum('total');
             $count = $this->chatOrders($f)->count();
             $conversations = $this->conversations($f)->count();
+            $paid = (int) $this->chatOrders($f)->whereIn('status', ['paid', 'fulfilled', 'delivered'])->count();
+            $discountTotal = (float) $this->chatOrders($f)->sum('discount_amount');
+            $discountedOrders = (int) $this->chatOrders($f)->where('discount_amount', '>', 0)->count();
+
+            // Top products from order line items.
+            $productQty = [];
+            foreach ($this->chatOrders($f)->get(['line_items']) as $o) {
+                foreach ((array) $o->line_items as $li) {
+                    $title = (string) ($li['title'] ?? 'Item');
+                    $productQty[$title] = ($productQty[$title] ?? 0) + (int) ($li['qty'] ?? 1);
+                }
+            }
+            arsort($productQty);
+            $topProducts = collect($productQty)->take(5)
+                ->map(fn ($qty, $title) => ['title' => $title, 'qty' => $qty])->values()->all();
+
+            // AOV per bucket, aligned to the revenue trend.
+            $revByBucket = [];
+            $cntByBucket = [];
+            foreach ($this->chatOrders($f)->get(['total', 'created_at']) as $o) {
+                $k = $this->bucketKey($o->created_at, $f->group);
+                $revByBucket[$k] = ($revByBucket[$k] ?? 0) + (float) $o->total;
+                $cntByBucket[$k] = ($cntByBucket[$k] ?? 0) + 1;
+            }
+            $aovTrend = array_map(function ($p) use ($revByBucket, $cntByBucket) {
+                $c = $cntByBucket[$p['day']] ?? 0;
+
+                return ['day' => $p['day'], 'value' => $c > 0 ? round(($revByBucket[$p['day']] ?? 0) / $c, 2) : 0.0];
+            }, $this->dailySeries($f, 'revenue'));
 
             return [
                 'revenue' => round($revenue, 2),
                 'orders' => $count,
                 'aov' => $count > 0 ? round($revenue / $count, 2) : 0.0,
                 'conversion_rate' => $conversations > 0 ? round($count / $conversations * 100, 1) : 0.0,
+                'discount_total' => round($discountTotal, 2),
+                'discounted_orders' => $discountedOrders,
+                'funnel' => [
+                    ['label' => 'Conversations', 'value' => $conversations],
+                    ['label' => 'Orders', 'value' => $count],
+                    ['label' => 'Paid', 'value' => $paid],
+                ],
+                'top_products' => $topProducts,
                 'by_channel' => $this->channelBreakdown($f),
                 'by_agent' => collect($this->agentLeaderboard($f))
                     ->map(fn ($a) => ['name' => $a['name'], 'revenue' => $a['revenue'], 'handled' => $a['handled']])
                     ->all(),
                 'trend' => $this->dailySeries($f, 'revenue'),
+                'aov_trend' => $aovTrend,
             ];
         });
     }

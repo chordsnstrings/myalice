@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Download, MessagesSquare, CircleCheck, Timer, Gauge, ShieldCheck, Bot } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { AppShell } from '@/components/shell/AppShell';
@@ -49,6 +49,11 @@ function qs(filters: AnalyticsFilterState, extra: Record<string, string>) {
     const p = new URLSearchParams({ range: filters.range, ...extra });
     if (filters.channel) p.set('channel', filters.channel);
     if (filters.agent) p.set('agent', String(filters.agent));
+    if (filters.group && filters.group !== 'day') p.set('group', filters.group);
+    if (filters.range === 'custom') {
+        if (filters.from) p.set('from', filters.from);
+        if (filters.to) p.set('to', filters.to);
+    }
     return p.toString();
 }
 
@@ -155,6 +160,7 @@ export default function Operations({ ops, channels, agents, filters }: Props) {
                 <Card className="mt-3 overflow-hidden">
                     <div className="border-b border-default px-5 py-3.5">
                         <h3 className="text-sm font-semibold">By channel</h3>
+                        <p className="text-[12px] text-tertiary">Click a row to open that channel in the inbox.</p>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[520px] text-sm">
@@ -172,7 +178,11 @@ export default function Operations({ ops, channels, agents, filters }: Props) {
                                     <tr><td colSpan={5} className="px-5 py-8 text-center text-tertiary">No activity in this range</td></tr>
                                 ) : (
                                     ops.by_channel.map((c) => (
-                                        <tr key={c.channel} className="border-t border-default">
+                                        <tr
+                                            key={c.channel}
+                                            onClick={() => router.visit(`/inbox?channel=${c.channel}`)}
+                                            className="cursor-pointer border-t border-default transition-colors hover:bg-surface-hover"
+                                        >
                                             <td className="px-5 py-3 font-medium capitalize">{c.channel}</td>
                                             <td className="px-5 py-3 text-end tnum">{c.conversations}</td>
                                             <td className="px-5 py-3 text-end tnum text-secondary">{c.avg_response}</td>

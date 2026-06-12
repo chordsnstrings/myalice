@@ -5,6 +5,9 @@ export interface AnalyticsFilterState {
     range: string;
     channel: string | null;
     agent: number | null;
+    group?: string;
+    from?: string | null;
+    to?: string | null;
 }
 
 interface Props {
@@ -12,16 +15,27 @@ interface Props {
     filters: AnalyticsFilterState;
     channels: { channel: string; name: string }[];
     agents?: { id: number; name: string }[];
+    /** Hide the day/week/month grouping toggle on reports without trend charts. */
+    grouping?: boolean;
 }
 
 const ranges = [
     { id: '7d', label: '7 days' },
     { id: '30d', label: '30 days' },
     { id: '90d', label: '90 days' },
+    { id: 'custom', label: 'Custom' },
 ];
 
-/** Shared, functional date-range + channel + team filter bar (B10). */
-export function FilterBar({ routeUrl, filters, channels, agents }: Props) {
+const groups = [
+    { id: 'day', label: 'Day' },
+    { id: 'week', label: 'Week' },
+    { id: 'month', label: 'Month' },
+];
+
+const isoDaysAgo = (n: number) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+
+/** Shared date-range + grouping + channel + team filter bar (B10). */
+export function FilterBar({ routeUrl, filters, channels, agents, grouping = true }: Props) {
     const go = (patch: Partial<AnalyticsFilterState>) => {
         const next = { ...filters, ...patch };
         router.get(
@@ -30,13 +44,23 @@ export function FilterBar({ routeUrl, filters, channels, agents }: Props) {
                 range: next.range,
                 channel: next.channel ?? undefined,
                 agent: next.agent ?? undefined,
+                group: next.group && next.group !== 'day' ? next.group : undefined,
+                from: next.range === 'custom' ? (next.from ?? undefined) : undefined,
+                to: next.range === 'custom' ? (next.to ?? undefined) : undefined,
             },
             { preserveState: true, preserveScroll: true, replace: true },
         );
     };
 
+    const pickRange = (id: string) =>
+        id === 'custom'
+            ? go({ range: 'custom', from: filters.from ?? isoDaysAgo(29), to: filters.to ?? isoDaysAgo(0) })
+            : go({ range: id });
+
     const selectClass =
         'h-8 cursor-pointer rounded-[var(--radius-control)] border border-strong bg-surface px-2.5 text-[13px] text-primary outline-none transition-colors hover:bg-surface-hover focus:border-accent';
+    const dateClass =
+        'h-8 rounded-[var(--radius-control)] border border-strong bg-surface px-2 text-[13px] text-primary outline-none transition-colors focus:border-accent';
 
     return (
         <div className="flex flex-wrap items-center gap-2">
@@ -44,7 +68,7 @@ export function FilterBar({ routeUrl, filters, channels, agents }: Props) {
                 {ranges.map((r) => (
                     <button
                         key={r.id}
-                        onClick={() => go({ range: r.id })}
+                        onClick={() => pickRange(r.id)}
                         className={cn(
                             'press rounded-[6px] px-2.5 py-1 text-[13px] font-medium transition-all',
                             filters.range === r.id
@@ -57,32 +81,43 @@ export function FilterBar({ routeUrl, filters, channels, agents }: Props) {
                 ))}
             </div>
 
-            <select
-                value={filters.channel ?? ''}
-                onChange={(e) => go({ channel: e.target.value || null })}
-                className={selectClass}
-                aria-label="Channel"
-            >
+            {filters.range === 'custom' && (
+                <div className="inline-flex items-center gap-1.5">
+                    <input type="date" value={filters.from ?? ''} max={filters.to ?? undefined} onChange={(e) => go({ from: e.target.value })} className={dateClass} aria-label="From" />
+                    <span className="text-[12px] text-tertiary">→</span>
+                    <input type="date" value={filters.to ?? ''} min={filters.from ?? undefined} onChange={(e) => go({ to: e.target.value })} className={dateClass} aria-label="To" />
+                </div>
+            )}
+
+            {grouping && (
+                <div className="inline-flex rounded-[var(--radius-control)] border border-default bg-surface p-0.5 shadow-[var(--shadow-xs)]">
+                    {groups.map((g) => (
+                        <button
+                            key={g.id}
+                            onClick={() => go({ group: g.id })}
+                            className={cn(
+                                'press rounded-[6px] px-2.5 py-1 text-[13px] font-medium transition-all',
+                                (filters.group ?? 'day') === g.id ? 'bg-accent-subtle text-accent' : 'text-secondary hover:text-primary',
+                            )}
+                        >
+                            {g.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            <select value={filters.channel ?? ''} onChange={(e) => go({ channel: e.target.value || null })} className={selectClass} aria-label="Channel">
                 <option value="">All channels</option>
                 {channels.map((c) => (
-                    <option key={c.channel} value={c.channel}>
-                        {c.name}
-                    </option>
+                    <option key={c.channel} value={c.channel}>{c.name}</option>
                 ))}
             </select>
 
             {agents && (
-                <select
-                    value={filters.agent ?? ''}
-                    onChange={(e) => go({ agent: e.target.value ? Number(e.target.value) : null })}
-                    className={selectClass}
-                    aria-label="Team member"
-                >
+                <select value={filters.agent ?? ''} onChange={(e) => go({ agent: e.target.value ? Number(e.target.value) : null })} className={selectClass} aria-label="Team member">
                     <option value="">All team</option>
                     {agents.map((a) => (
-                        <option key={a.id} value={a.id}>
-                            {a.name}
-                        </option>
+                        <option key={a.id} value={a.id}>{a.name}</option>
                     ))}
                 </select>
             )}

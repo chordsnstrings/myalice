@@ -18,6 +18,7 @@ class AnalyticsFilters
         public string $range,
         public ?string $channel = null,
         public ?int $agentId = null,
+        public string $group = 'day',
     ) {}
 
     public static function fromRequest(Request $request): self
@@ -40,6 +41,7 @@ class AnalyticsFilters
 
         $channel = $request->query('channel');
         $agent = $request->query('agent');
+        $group = (string) $request->query('group', 'day');
 
         return new self(
             from: $from->clone()->utc(),
@@ -47,6 +49,7 @@ class AnalyticsFilters
             range: $range,
             channel: is_string($channel) && $channel !== '' ? $channel : null,
             agentId: is_numeric($agent) ? (int) $agent : null,
+            group: in_array($group, ['day', 'week', 'month'], true) ? $group : 'day',
         );
     }
 
@@ -61,7 +64,14 @@ class AnalyticsFilters
             range: $this->range,
             channel: $this->channel,
             agentId: $this->agentId,
+            group: $this->group,
         );
+    }
+
+    /** Same window, forced to a given trend grouping (day|week|month). */
+    public function withGroup(string $group): self
+    {
+        return new self($this->from, $this->to, $this->range, $this->channel, $this->agentId, $group);
     }
 
     public function days(): int
@@ -76,12 +86,20 @@ class AnalyticsFilters
             $this->to->toDateTimeString(),
             $this->channel ?? '',
             $this->agentId ?? '',
+            $this->group,
         ]));
     }
 
-    /** @return array{range: string, channel: string|null, agent: int|null} */
+    /** @return array{range: string, channel: string|null, agent: int|null, group: string, from: string|null, to: string|null} */
     public function state(): array
     {
-        return ['range' => $this->range, 'channel' => $this->channel, 'agent' => $this->agentId];
+        return [
+            'range' => $this->range,
+            'channel' => $this->channel,
+            'agent' => $this->agentId,
+            'group' => $this->group,
+            'from' => $this->range === 'custom' ? $this->from->toDateString() : null,
+            'to' => $this->range === 'custom' ? $this->to->toDateString() : null,
+        ];
     }
 }

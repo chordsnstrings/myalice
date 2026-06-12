@@ -59,7 +59,9 @@ function StatusTick({ status }: { status?: Message['status'] }) {
 
 export default function InboxIndex({ conversations, messages: seed, agents, templates, quickReplies }: Props) {
     const { toast } = useToast();
-    const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>('All');
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+    const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>(urlParams.get('status') === 'resolved' ? 'Closed' : 'All');
+    const [channelFilter, setChannelFilter] = useState<string | null>(urlParams.get('channel'));
     const [tool, setTool] = useState<'emoji' | 'quick' | null>(null);
     const [query, setQuery] = useState('');
     const [selectedId, setSelectedId] = useState<number | null>(conversations[0]?.id ?? null);
@@ -107,9 +109,10 @@ export default function InboxIndex({ conversations, messages: seed, agents, temp
         if (activeFilter === 'Mine') list = list.filter((c) => c.assignee?.id === 1);
         if (activeFilter === 'Unassigned') list = list.filter((c) => !c.assignee);
         if (activeFilter === 'Closed') list = list.filter((c) => c.status === 'resolved');
+        if (channelFilter) list = list.filter((c) => c.channel === channelFilter);
         if (query) list = list.filter((c) => c.contact.name.toLowerCase().includes(query.toLowerCase()));
         return list;
-    }, [conversations, activeFilter, query]);
+    }, [conversations, activeFilter, channelFilter, query]);
 
     const scrollEnd = () => setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), 20);
 
@@ -229,6 +232,15 @@ export default function InboxIndex({ conversations, messages: seed, agents, temp
                                 </button>
                             ))}
                         </div>
+                        {channelFilter && (
+                            <button
+                                onClick={() => setChannelFilter(null)}
+                                className="press mt-2 inline-flex items-center gap-1 rounded-full bg-accent-subtle px-2.5 py-1 text-[12px] font-medium capitalize text-accent"
+                            >
+                                {channelFilter}
+                                <X className="size-3" />
+                            </button>
+                        )}
                     </div>
 
                     <div className="min-h-0 flex-1 overflow-y-auto">
