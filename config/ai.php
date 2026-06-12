@@ -9,6 +9,10 @@ return [
     'history_limit' => 30,
     'catalog_limit' => 20,
 
+    // Auto-tag conversations with their topic (one cheap LLM pass per chat).
+    'auto_tag' => (bool) env('AI_AUTO_TAG', true),
+    'auto_tag_messages' => (int) env('AI_AUTO_TAG_MESSAGES', 6),
+
     // Knowledge injection (website/Facebook snippets) — how much to crawl + inject.
     'knowledge' => [
         'snippet_limit' => (int) env('AI_KNOWLEDGE_SNIPPETS', 6),

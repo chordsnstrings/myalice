@@ -173,7 +173,7 @@ class InboxController extends Controller
 
         $tag = isset($data['tag_id'])
             ? Tag::findOrFail($data['tag_id'])
-            : Tag::firstOrCreate(['name' => trim((string) $data['name'])], ['color' => 'accent']);
+            : Tag::firstOrCreate(['name' => trim((string) $data['name'])], ['color' => 'accent', 'kind' => 'topic']);
 
         $conversation->tags()->syncWithoutDetaching([$tag->id]);
 

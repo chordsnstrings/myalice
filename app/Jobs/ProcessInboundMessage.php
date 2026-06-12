@@ -141,6 +141,11 @@ class ProcessInboundMessage implements ShouldQueue
             Broadcast::where('id', $recipient->broadcast_id)->increment('replied');
         }
 
+        // Auto-tag the conversation's topic (cheap LLM pass) while it's untagged.
+        if ($conversation->tags()->doesntExist()) {
+            ClassifyConversationTopic::dispatch($this->workspaceId, $conversation->id);
+        }
+
         // An opt-out takes the conversation off the AI; otherwise let the agent
         // consider a reply (debounced for burst messages, M13).
         if ($optedOut) {

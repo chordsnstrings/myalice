@@ -76,7 +76,7 @@ class DatabaseSeeder extends Seeder
 
         // Topic tags — "what conversations are about" — power the Topics report.
         foreach (['Shipping' => 'info', 'Returns' => 'warning', 'Sizing' => 'accent', 'Order status' => 'success', 'Payment' => 'danger'] as $name => $color) {
-            Tag::create(['name' => $name, 'color' => $color]);
+            Tag::create(['name' => $name, 'color' => $color, 'kind' => 'topic']);
         }
         $topicTagIds = Tag::whereIn('name', ['Shipping', 'Returns', 'Sizing', 'Order status', 'Payment'])->pluck('id')->all();
 
